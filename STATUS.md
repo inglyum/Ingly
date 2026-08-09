@@ -58,6 +58,8 @@
 - ✅ Logica IVA + numerazione + fattura da preventivo (`src/domain/fiscal.ts`) — testata.
 - ✅ Contratti pagamenti provider-agnostici + piano acconto/saldo (`src/domain/payments.ts`) — testati.
 - 📄 Approccio d'integrazione documentato in `.claude/docs/FASE3-FISCO.md`.
+- ✅ Anteprima Fattura UI collegata (v82): "🧾 Anteprima Fattura (fisco)" nel
+  preventivatore — genera la fattura normalizzata dal preventivo (IVA, imponibile/imposta, numerazione).
 - ⏳ Fattura Elettronica SDI via intermediario (Fatture in Cloud / ACube / Aruba) — richiede backend.
 - ⏳ Stripe (delega PCI) + riconciliazione bancaria (PSD2) — richiede backend.
 
