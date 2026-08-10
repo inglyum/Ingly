@@ -88,7 +88,7 @@
 - Motori/contratti puri e testati: pricing · preventivo · ordini · clienti · fisco ·
   pagamenti · auth/RBAC · sync · e-commerce · spedizioni · marketing · reporting.
 - UI agganciate ai motori: preventivatore · ordini · clienti · BI · fattura & pagamento.
-- Fix grafici sidebar: preferiti in cima · icone SVG allineate · no flicker/ondeggiamento.
+- Fix grafici sidebar: preferiti in cima · icone SVG allineate · no flicker · **icone SVG uniformi su tutte le voci (v85)**.
 - Test: **7/7 verdi** con assert sui valori KB (36.90, IVA 122, RBAC, LWW, CLV 600, cassa 150/600).
 
 ## Prossimo passo consigliato
