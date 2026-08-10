@@ -56,7 +56,8 @@
 
 ## Fase 3 — Fisco IT & pagamenti 🟡 (contratti pronti)
 - ✅ Logica IVA + numerazione + fattura da preventivo (`src/domain/fiscal.ts`) — testata.
-- ✅ Contratti pagamenti provider-agnostici + piano acconto/saldo (`src/domain/payments.ts`) — testati.
+- ✅ Contratti pagamenti + piano acconto/saldo (`src/domain/payments.ts`) — testati.
+- ✅ Piano pagamento UI collegato (v84): acconto 50%/saldo dentro l'anteprima fattura.
 - 📄 Approccio d'integrazione documentato in `.claude/docs/FASE3-FISCO.md`.
 - ✅ Anteprima Fattura UI collegata (v82): "🧾 Anteprima Fattura (fisco)" nel
   preventivatore — genera la fattura normalizzata dal preventivo (IVA, imponibile/imposta, numerazione).
