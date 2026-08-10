@@ -9,9 +9,9 @@
 | 0 | Rete di sicurezza (test + CI) | ✅ **completa** |
 | 1 | Modularizzazione (Vite+TS, file singolo) | 🟡 **in corso** — moduli enterprise estratti; dominio iniziato |
 | 2 | Backend, sync local-first, auth/RBAC | 🟡 **schema + contratti pronti** (manca infra) |
-| 3 | Fisco IT (SDI) + pagamenti | ⏳ da fare |
-| 4 | Integrazioni & omnichannel | ⏳ da fare |
-| 5 | BI, SaaS multi-tenant, ops | ⏳ da fare |
+| 3 | Fisco IT (SDI) + pagamenti | 🟡 **contratti + UI** (fattura & pagamento; invio SDI ⏳ infra) |
+| 4 | Integrazioni & omnichannel | 🟡 **contratti pronti** (manca infra) |
+| 5 | BI, SaaS multi-tenant, ops | 🟡 **BI agganciato**; SaaS ⏳ |
 
 ---
 
@@ -83,12 +83,16 @@
 ---
 
 ## Metriche correnti
-- Monolite: **v74** · 133 blocchi `<script>` · 0 errori sintassi.
-- Bundle modulare: ~38 kB (8 moduli UI + core + dominio: pricing/quote/orders/clients).
-- Motori di dominio puri e testati: **pricing · preventivo · ordini · clienti**.
-- Test: **7/7 verdi** con assert sui valori KB (36.90, acconto 166.90, KPI, CLV 600).
+- Monolite: **v84** · ~141 blocchi `<script>` · 0 errori sintassi.
+- Bundle modulare: ~49 kB — 13 motori in `window.InglyDomain`.
+- Motori/contratti puri e testati: pricing · preventivo · ordini · clienti · fisco ·
+  pagamenti · auth/RBAC · sync · e-commerce · spedizioni · marketing · reporting.
+- UI agganciate ai motori: preventivatore · ordini · clienti · BI · fattura & pagamento.
+- Fix grafici sidebar: preferiti in cima · icone SVG allineate · no flicker/ondeggiamento.
+- Test: **7/7 verdi** con assert sui valori KB (36.90, IVA 122, RBAC, LWW, CLV 600, cassa 150/600).
 
 ## Prossimo passo consigliato
-Collegare la **UI del preventivatore** del monolite al motore `quote.ts` (un
-aggancio alla volta, con test di regressione), poi Ordini e Clienti. In parallelo,
-preparare **schema dati + contratti Fase 2** (backend) pronti per l'infrastruttura.
+Restano lavori fattibili offline: (a) uniformare le **icone SVG** a tutta la sidebar;
+(c) continuare a **integrare il bundle** sostituendo altri script inline. Le fasi 2-3-4
+e SaaS restano al livello "contratti/UI locale" finché non c'è **infrastruttura**
+(Postgres/hosting/OIDC/SDI/Stripe).
