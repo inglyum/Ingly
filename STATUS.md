@@ -91,6 +91,9 @@
 - Fix grafici sidebar: preferiti in cima · icone SVG allineate · no flicker · **icone SVG uniformi su tutte le voci (v85)**.
 - Test: **7/7 verdi** con assert sui valori KB (36.90, IVA 122, RBAC, LWW, CLV 600, cassa 150/600).
 
+## UX
+- ✅ Consolidatore Strumenti (v86): i pulsanti-strumento delle sezioni raggruppati in un menu "🧰 Strumenti" (meno clutter).
+
 ## Prossimo passo consigliato
 Restano lavori fattibili offline: (a) uniformare le **icone SVG** a tutta la sidebar;
 (c) continuare a **integrare il bundle** sostituendo altri script inline. Le fasi 2-3-4
