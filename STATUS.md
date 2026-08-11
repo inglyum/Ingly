@@ -93,6 +93,7 @@
 
 ## UX
 - ✅ Consolidatore Strumenti (v86): i pulsanti-strumento delle sezioni raggruppati in un menu "🧰 Strumenti" (meno clutter).
+- ✅ Consolidamento sezioni (v87-v88): una sola voce per funzione (Ordini, Fornitori, CLV, Report, Competitors, Magazzino→Items) con barra "Viste" che combina le funzioni; 12 sezioni ridondanti rimosse dal menu + fix doppioni nav.
 
 ## Prossimo passo consigliato
 Restano lavori fattibili offline: (a) uniformare le **icone SVG** a tutta la sidebar;
