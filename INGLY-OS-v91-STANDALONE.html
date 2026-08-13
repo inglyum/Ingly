@@ -6138,6 +6138,7 @@ Il sistema analizza revenue, margini, clienti a rischio, ordini in scadenza, pro
       <button onclick="Catalog.modalTab('base',this)" id="ctab-base" style="padding:10px 18px;background:var(--bg-card);border:none;border-bottom:2px solid var(--primary);color:var(--primary);cursor:pointer;font-size:12px;font-weight:700">📦 Prodotto</button>
       <button onclick="Catalog.modalTab('b2b',this)" id="ctab-b2b" style="padding:10px 18px;background:none;border:none;border-bottom:2px solid transparent;color:var(--text-muted);cursor:pointer;font-size:12px;font-weight:600">💼 Listino B2B</button>
       <button onclick="Catalog.modalTab('etsy',this)" id="ctab-etsy" style="padding:10px 18px;background:none;border:none;border-bottom:2px solid transparent;color:var(--text-muted);cursor:pointer;font-size:12px;font-weight:600">🛍️ Etsy / SEO</button>
+      <button onclick="Catalog.modalTab('ingly',this)" id="ctab-ingly" style="display:none;padding:10px 18px;background:none;border:none;border-bottom:2px solid transparent;color:var(--text-muted);cursor:pointer;font-size:12px;font-weight:600">🏭 Scheda Ingly</button>
     </div>
     <div class="modal-body">
 
@@ -6674,6 +6675,9 @@ Il sistema analizza revenue, margini, clienti a rischio, ordini in scadenza, pro
           <input class="form-control" id="cat-etsy-tags-saved" placeholder="I tag generati verranno salvati qui separati da virgola...">
         </div>
       </div>
+
+      <!-- TAB INGLY: dati ricchi dal catalogo ufficiale (read-only) -->
+      <div id="ctab-content-ingly" style="display:none"></div>
 
     </div>
     <div class="modal-footer">
@@ -29241,6 +29245,11 @@ const Catalog={
     eid('modal-catalog-title').textContent=id?'✏️ Modifica Prodotto':'➕ Nuovo Prodotto';
     // Reset to base tab
     this.modalTab('base', null);
+    // Ingly rich-data tab: hidden until a product with .ingly is loaded
+    this._editIngly=null;
+    this._editSku=null;
+    { const iTab=eid('ctab-ingly'); if(iTab)iTab.style.display='none';
+      const iPane=eid('ctab-content-ingly'); if(iPane)iPane.innerHTML=''; }
     // Populate category select dynamically
     const catSel = eid('cat-cat');
     if(catSel){
@@ -29284,6 +29293,9 @@ const Catalog={
         // Load Etsy SEO
         if(p.etsyDesc && eid('cat-etsy-saved')) eid('cat-etsy-saved').value=p.etsyDesc;
         if(p.etsyTagsSEO && eid('cat-etsy-tags-saved')) eid('cat-etsy-tags-saved').value=p.etsyTagsSEO;
+        this._editIngly=p.ingly||null;
+        this._editSku=p.sku||null;
+        this._renderInglyTab(p);
         this.recalcB2B();
       }
     }else{
@@ -29326,12 +29338,53 @@ const Catalog={
   },
   modalTab(tab, btn){
     if(!tab) return;
-    ['base','b2b','etsy'].forEach(t=>{
+    ['base','b2b','etsy','ingly'].forEach(t=>{
       const c=eid('ctab-content-'+t), b=eid('ctab-'+t);
       if(c) c.style.display=t===tab?'block':'none';
       if(b){ b.style.background=t===tab?'var(--bg-card)':'none'; b.style.borderBottomColor=t===tab?'var(--primary)':'transparent'; b.style.color=t===tab?'var(--primary)':'var(--text-muted)'; }
     });
     if(tab==='b2b') setTimeout(()=>this.syncB2BFromCalc(),80);
+  },
+  // Fase B — scheda ricca dei prodotti importati dal catalogo Ingly (read-only)
+  _renderInglyTab(p){
+    const pane=eid('ctab-content-ingly'), tabBtn=eid('ctab-ingly');
+    const g=p&&p.ingly;
+    if(!pane||!tabBtn) return;
+    if(!g){ tabBtn.style.display='none'; pane.innerHTML=''; return; }
+    tabBtn.style.display='';
+    const esc=s=>String(s==null?'':s).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;');
+    const eur=v=>(v==null||v==='')?'—':Number(v).toFixed(2).replace('.',',')+' €';
+    const row=(lbl,val)=>val?`<div style="display:flex;gap:12px;padding:7px 0;border-bottom:1px solid var(--border)"><span style="flex:0 0 130px;font-size:11px;color:var(--text-dim);text-transform:uppercase;letter-spacing:.5px">${esc(lbl)}</span><span style="flex:1;font-size:13px;color:var(--text)">${esc(val)}</span></div>`:'';
+    const priceChip=(lbl,val,accent)=>`<div style="flex:1;min-width:90px;text-align:center;padding:10px 8px;background:var(--bg-card2);border:1px solid ${accent?'var(--primary-border)':'var(--border)'};border-radius:var(--radius-sm)"><div style="font-size:10px;color:var(--text-dim);text-transform:uppercase;letter-spacing:.5px;margin-bottom:4px">${esc(lbl)}</div><div style="font-size:15px;font-weight:800;color:${accent?'var(--primary)':'var(--text)'}">${eur(val)}</div></div>`;
+    const promptBox=(lbl,txt)=>txt?`<div class="form-group"><label class="form-label">${esc(lbl)}</label><div style="position:relative"><textarea class="form-control" readonly rows="4" style="font-family:var(--mono);font-size:11px;resize:vertical">${esc(txt)}</textarea><button type="button" onclick="navigator.clipboard&&navigator.clipboard.writeText(this.previousElementSibling.value).then(()=>toast('Copiato','success',1500))" style="position:absolute;top:6px;right:6px;padding:4px 9px;background:var(--bg-card3);border:1px solid var(--border2);border-radius:6px;color:var(--text-muted);cursor:pointer;font-size:11px">📋</button></div></div>`:'';
+    const prio=g.priorita?`<span class="badge badge-purple" style="margin-left:8px">priorità ${esc(g.priorita)}</span>`:'';
+    pane.innerHTML=`
+      <div class="alert alert-info" style="margin-bottom:16px">🏭 Dati dal catalogo ufficiale Ingly. Sola lettura — la scheda di lavoro resta nei tab Prodotto / B2B / Etsy.</div>
+      ${g.sottotitolo?`<div style="font-size:14px;color:var(--text-muted);margin-bottom:14px">${esc(g.sottotitolo)}${prio}</div>`:''}
+      <div class="card-title">Listino consigliato</div>
+      <div style="display:flex;gap:8px;flex-wrap:wrap;margin-bottom:20px">
+        ${priceChip('Entry',g.prezzoEntry)}
+        ${priceChip('Standard',p.salePrice,true)}
+        ${priceChip('Premium',g.prezzoPremium)}
+        ${priceChip('B2B 50pz',g.prezzoB2B)}
+      </div>
+      <div class="card-title">Scheda tecnica</div>
+      <div style="margin-bottom:20px">
+        ${row('Dimensioni',g.dimensioni)}
+        ${row('Tecnologia',g.tecnologia)}
+        ${row('Piattaforma',g.piattaforma)}
+        ${row('Componenti',g.componenti)}
+        ${row('Packaging',g.packaging)}
+        ${row('Margine',g.margine)}
+        ${row('Posizionamento',g.posizionamento)}
+        ${row('Personalizz.',g.personalizzazione)}
+      </div>
+      ${(g.upsell||g.bundle)?`<div class="card-title">Cross-sell</div><div style="margin-bottom:20px">${row('Upsell',g.upsell)}${row('Bundle',g.bundle)}</div>`:''}
+      ${(g.seo||g.keywords)?`<div class="card-title">SEO</div><div style="margin-bottom:20px">${row('Titolo SEO',g.seo)}${row('Keywords',g.keywords)}</div>`:''}
+      <div class="card-title">Prompt</div>
+      ${promptBox('⚙️ Prompt di produzione',g.promptProduzione)}
+      ${promptBox('🖼️ Prompt immagine catalogo',g.promptImmagine)}
+    `;
   },
   // ──────────── SMART CALC ENGINE ────────────
   _MKEY:'ingly_laser_80w',
@@ -29927,6 +29980,9 @@ Genera ESATTAMENTE in questo formato:
       etsyTagsSEO:eid('cat-etsy-tags-saved')?.value||'',
     };
     if(this._photo)prod.photo=this._photo;
+    // Preserva i dati ricchi Ingly e lo SKU sulle modifiche (save ricostruisce l'oggetto da zero)
+    if(this._editIngly)prod.ingly=this._editIngly;
+    if(this._editSku)prod.sku=this._editSku;
     if(this.editId){prod.id=this.editId;}else{prod.id=Date.now();}
     await IDB.put('catalog',prod).catch(e=>{toast('Errore salvataggio: '+e.message,'error');return;});
     AppStore.invalidate('catalog');
