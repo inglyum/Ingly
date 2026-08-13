@@ -2653,6 +2653,8 @@ tr:hover td{ box-shadow: inset 3px 0 0 -1px var(--primary-border); }
       <option value="low">🔴 Margine basso (<30%)</option>
       <option value="negative">⛔ Sottocosto</option>
     </select>
+    <!-- Solo Ingly -->
+    <button id="cat-only-ingly" onclick="Catalog.toggleOnlyIngly()" style="padding:5px 10px;background:transparent;color:var(--text-muted);border:1px solid var(--border2);border-radius:8px;cursor:pointer;font-size:11px;font-weight:700;flex-shrink:0;white-space:nowrap" title="Mostra solo i prodotti del catalogo ufficiale Ingly">🏭 Solo Ingly</button>
     <!-- Reset -->
     <button onclick="Catalog._resetFilters()" style="padding:5px 10px;background:rgba(239,68,68,.07);color:#ef4444;border:1px solid rgba(239,68,68,.2);border-radius:8px;cursor:pointer;font-size:11px;font-weight:700;flex-shrink:0;white-space:nowrap">✕ Reset</button>
     <!-- View toggle -->
@@ -28508,7 +28510,7 @@ window.CatalogCats = CatalogCats;
 ;
 
 const Catalog={
-  editId:null,catFilter:'',_photo:null,_sort:'',_search:'',_view:'grid',
+  editId:null,catFilter:'',_photo:null,_sort:'',_search:'',_view:'grid',_onlyIngly:false,
   get CAT_COLOR(){ return CatalogCats.getColorMap(); },
   set CAT_COLOR(v){},
   catTab(v,btn){
@@ -28590,15 +28592,21 @@ const Catalog={
     const mgLow  = margins.filter(m=>m<=30).length;
     // Price suggestions (below 20% margin = flag)
     const underpriced = withCost.filter(i=>(i.salePrice-i.costPrice)/i.salePrice*100 < 20);
+    // Copertura foto sui prodotti del catalogo ufficiale Ingly
+    const inglyItems = items.filter(i=>i.ingly);
+    const inglyPhoto = inglyItems.filter(i=>i.photo).length;
+    const inglyCov   = inglyItems.length ? Math.round(inglyPhoto/inglyItems.length*100) : 0;
 
-    el.innerHTML = [
+    const _tiles = [
       {ico:'fa-box',      l:'Prodotti',        v:items.length,              c:'#a78bfa', bg:'#8b5cf615'},
       {ico:'fa-tags',     l:'Categorie',        v:cats,                      c:'#60a5fa', bg:'#3b82f615'},
       {ico:'fa-euro-sign',l:'Listino totale',   v:'€'+Math.round(totalListino), c:'#34d399', bg:'#10b98115'},
       {ico:'fa-chart-bar',l:'Margine medio',    v:avgMargin+'%',             c:avgMargin>50?'#22c55e':avgMargin>30?'#f97316':'#ef4444', bg:'#22c55e15'},
       {ico:'fa-fire',     l:'Top Trend',        v:topTrend+' prodotti',      c:'#fb923c', bg:'#f9731615'},
       {ico:'fa-image',    l:'Con Foto',         v:withPhoto+'/'+items.length, c:'#38bdf8', bg:'#0ea5e915'},
-    ].map(k=>`<div style="background:var(--bg-card);border:1px solid var(--border);border-radius:var(--radius);padding:12px;display:flex;align-items:center;gap:10px">
+    ];
+    if(inglyItems.length) _tiles.push({ico:'fa-industry', l:'Foto Ingly', v:inglyPhoto+'/'+inglyItems.length+' · '+inglyCov+'%', c: inglyCov>=80?'#22c55e':inglyCov>=40?'#f59e0b':'#ef4444', bg:'#fbbf2415'});
+    el.innerHTML = _tiles.map(k=>`<div style="background:var(--bg-card);border:1px solid var(--border);border-radius:var(--radius);padding:12px;display:flex;align-items:center;gap:10px">
       <div style="width:30px;height:30px;background:${k.bg};border-radius:8px;display:flex;align-items:center;justify-content:center;flex-shrink:0">
         <i class="fas ${k.ico}" style="font-size:12px;color:${k.c}"></i>
       </div>
@@ -28989,6 +28997,7 @@ const Catalog={
     let items=await AppStore.get('catalog');
     // Filter
     if(this.catFilter)items=items.filter(i=>i.category===this.catFilter);
+    if(this._onlyIngly)items=items.filter(i=>i.ingly);
     if(this._search)items=items.filter(i=>(i.name+i.desc+i.tags+i.category).toLowerCase().includes(this._search));
     // Sort
     if(this._sort==='trend')items.sort((a,b)=>(b.trendScore||0)-(a.trendScore||0));
@@ -29006,7 +29015,7 @@ const Catalog={
     const filterCount = `${items.length} prodotto${items.length!==1?'i':''}`;
     const badge = document.getElementById('catalog-count-badge');
     if(badge) badge.textContent = filterCount;
-    if(!items.length){el.innerHTML=`<div style="text-align:center;padding:50px 20px;grid-column:1/-1;background:var(--bg-card);border-radius:16px;border:2px dashed var(--border)"><div style="font-size:52px;margin-bottom:14px">📦</div><div style="font-size:16px;font-weight:800;margin-bottom:6px">Nessun prodotto trovato</div><div style="font-size:13px;color:var(--text-muted);margin-bottom:18px">${this.catFilter||this._search||this._activeMarginFilter?'Prova a cambiare i filtri':'Inizia aggiungendo il tuo primo prodotto al catalogo'}</div><div style="display:flex;gap:8px;justify-content:center;flex-wrap:wrap">${this.catFilter||this._search||this._activeMarginFilter?`<button onclick="Catalog._resetFilters()" style="padding:8px 18px;background:var(--bg-card2);border:1px solid var(--border);border-radius:9px;cursor:pointer;font-size:12px;color:var(--text-muted)">✕ Rimuovi filtri</button>`:''}<button style="padding:8px 18px;background:var(--primary);color:#000;border:none;border-radius:9px;cursor:pointer;font-size:13px;font-weight:800" onclick="Catalog.openModal()"><i class="fas fa-plus"></i> Aggiungi Prodotto</button></div></div>`;return;}
+    if(!items.length){el.innerHTML=`<div style="text-align:center;padding:50px 20px;grid-column:1/-1;background:var(--bg-card);border-radius:16px;border:2px dashed var(--border)"><div style="font-size:52px;margin-bottom:14px">📦</div><div style="font-size:16px;font-weight:800;margin-bottom:6px">Nessun prodotto trovato</div><div style="font-size:13px;color:var(--text-muted);margin-bottom:18px">${this.catFilter||this._search||this._activeMarginFilter||this._onlyIngly?'Prova a cambiare i filtri':'Inizia aggiungendo il tuo primo prodotto al catalogo'}</div><div style="display:flex;gap:8px;justify-content:center;flex-wrap:wrap">${this.catFilter||this._search||this._activeMarginFilter||this._onlyIngly?`<button onclick="Catalog._resetFilters()" style="padding:8px 18px;background:var(--bg-card2);border:1px solid var(--border);border-radius:9px;cursor:pointer;font-size:12px;color:var(--text-muted)">✕ Rimuovi filtri</button>`:''}<button style="padding:8px 18px;background:var(--primary);color:#000;border:none;border-radius:9px;cursor:pointer;font-size:13px;font-weight:800" onclick="Catalog.openModal()"><i class="fas fa-plus"></i> Aggiungi Prodotto</button></div></div>`;return;}
     if(this._view==='list'){this.renderList(items,el);return;}
     this.renderGrid(items,el);
     } catch(e){ console.error('[Catalog.render]', e.message||e); }
@@ -30180,8 +30189,20 @@ Genera ESATTAMENTE in questo formato:
     this.render();
   },
 
+  toggleOnlyIngly(){
+    this._onlyIngly = !this._onlyIngly;
+    const b = document.getElementById('cat-only-ingly');
+    if(b){
+      b.style.background = this._onlyIngly ? 'var(--primary)' : 'transparent';
+      b.style.color = this._onlyIngly ? '#0a0a0a' : 'var(--text-muted)';
+      b.style.borderColor = this._onlyIngly ? 'var(--primary)' : 'var(--border2)';
+    }
+    this.render();
+  },
   _resetFilters(){
     this._activeMarginFilter = '';
+    this._onlyIngly = false;
+    { const b=document.getElementById('cat-only-ingly'); if(b){ b.style.background='transparent'; b.style.color='var(--text-muted)'; b.style.borderColor='var(--border2)'; } }
     this.filterCat('');
     this.search('');
     this.sortBy('name');
