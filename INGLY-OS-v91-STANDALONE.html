@@ -28537,6 +28537,33 @@ const Catalog={
     toast(`✅ "${(p.name||'').slice(0,25)}" aggiunto al preventivo`,'📋');
   },
 
+  // Fase F — aggiunge al preventivo il prodotto + i suoi upsell (risolti per SKU dalla Scheda Ingly)
+  async addBundleToQuote(id){
+    const p = await IDB.get('catalog', id).catch(()=>null);
+    if(!p) return toast('Prodotto non trovato','warning');
+    const all = await AppStore.get('catalog').catch(()=>[]);
+    const bySku = {};
+    all.forEach(x=>{ if(x.sku) bySku[String(x.sku).toUpperCase()] = x; });
+    const skus = String((p.ingly&&p.ingly.upsell)||'').match(/ING-[A-Z0-9-]+/gi) || [];
+    const seen = new Set([String(p.id)]);
+    const extras = [];
+    skus.forEach(s=>{ const m = bySku[s.toUpperCase()]; if(m && !seen.has(String(m.id))){ seen.add(String(m.id)); extras.push(m); } });
+    const toAdd = [p, ...extras];
+    if(typeof closeModal!=='undefined') closeModal('catalog');
+    App.navigate('quoter');
+    await new Promise(r=>setTimeout(r,250));
+    let n=0;
+    for(const prod of toAdd){
+      if(typeof Quoter!=='undefined' && Quoter.addFromCatalog){ Quoter.addFromCatalog(prod); n++; }
+      else if(typeof Quoter!=='undefined' && Quoter.lines){
+        Quoter.lines.push({desc:prod.name||'',name:prod.name||'',qty:1,unit:prod.unit||'pz',price:prod.salePrice||0,cost:prod.costPrice||0,vatRate:0.22,catalogId:prod.id}); n++;
+      }
+    }
+    if(typeof Quoter!=='undefined'){ if(Quoter.renderLines)Quoter.renderLines(); if(Quoter.recalcRight)Quoter.recalcRight(); }
+    const miss = skus.length - extras.length;
+    toast('✅ Bundle nel preventivo: '+n+' voci'+(extras.length?(' (prodotto + '+extras.length+' upsell)'):'')+(miss>0?(' · '+miss+' upsell non in catalogo'):''),'success',5500);
+  },
+
   search(v){this._search=v.toLowerCase();this.render();},
   sortBy(v){this._sort=v;this.render();},
   setView(v){
@@ -29446,7 +29473,8 @@ const Catalog={
         ${row('Posizionamento',g.posizionamento)}
         ${row('Personalizz.',g.personalizzazione)}
       </div>
-      ${(g.upsell||g.bundle)?`<div class="card-title">Cross-sell</div><div style="margin-bottom:20px">${row('Upsell',g.upsell)}${row('Bundle',g.bundle)}</div>`:''}
+      ${(g.upsell||g.bundle)?`<div class="card-title">Cross-sell</div><div style="margin-bottom:12px">${row('Upsell',g.upsell)}${row('Bundle',g.bundle)}</div>
+        ${g.upsell?`<button type="button" onclick="Catalog.addBundleToQuote(${p.id})" style="width:100%;padding:11px;margin-bottom:20px;background:#22c55e;color:#fff;border:none;border-radius:9px;cursor:pointer;font-size:13px;font-weight:800">➕ Crea bundle nel preventivo (prodotto + upsell)</button>`:''}`:''}
       ${(g.seo||g.keywords)?`<div class="card-title">SEO</div><div style="margin-bottom:20px">${row('Titolo SEO',g.seo)}${row('Keywords',g.keywords)}</div>`:''}
       <div class="card-title">Prompt</div>
       ${promptBox('⚙️ Prompt di produzione',g.promptProduzione)}
