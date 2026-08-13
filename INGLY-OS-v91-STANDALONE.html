@@ -2603,6 +2603,7 @@ tr:hover td{ box-shadow: inset 3px 0 0 -1px var(--primary-border); }
       <button class="btn btn-secondary btn-sm" onclick="ExcelExport.exportCatalogZip()" style="color:#f59e0b;border-color:#f59e0b40" title="Esporta Excel + immagini in ZIP"><i class="fas fa-file-archive"></i> ZIP+Foto</button>
       <button class="btn btn-secondary btn-sm" onclick="CatalogImportExport.importCSV()" style="gap:5px"><i class="fas fa-file-import"></i> CSV In</button>
       <button class="btn btn-secondary btn-sm" onclick="CatalogImportExport.exportCSV()" style="gap:5px"><i class="fas fa-file-export"></i> CSV Out</button>
+      <button class="btn btn-secondary btn-sm" onclick="Catalog.exportImagePrompts()" style="gap:5px"><i class="fas fa-image"></i> Prompt Immagini</button>
       <button class="btn btn-secondary btn-sm" onclick="CatalogPDF.toggle()" style="gap:5px"><i class="fas fa-file-pdf"></i> PDF</button>
       <button class="btn btn-secondary btn-sm" onclick="PriceAdvisor.showPanel()" style="background:linear-gradient(135deg,#7c3aed,#6d28d9);color:#fff;border:none;gap:5px"><i class="fas fa-robot"></i> AI Prezzi</button>
       <button class="btn btn-primary btn-sm" onclick="Catalog.openModal()" style="gap:5px"><i class="fas fa-plus"></i> Prodotto</button>
@@ -28903,6 +28904,57 @@ const Catalog={
     AppStore.invalidate('catalog');
     await this.render();
     toast('✅ '+n+' prodotti Ingly importati'+(skip?(' · '+skip+' già presenti'):''),'success',5000);
+  },
+
+  // Fase C — esporta i prompt immagine (+ produzione) per generarli con un tool esterno
+  async exportImagePrompts(){
+    const items = await AppStore.get('catalog').catch(()=>[]);
+    const rows = items
+      .map(p=>({
+        sku: p.sku||'',
+        nome: p.name||'',
+        categoria: p.category||'',
+        prompt_immagine: (p.ingly&&p.ingly.promptImmagine)||'',
+        prompt_produzione: (p.ingly&&p.ingly.promptProduzione)||'',
+        materiali: p.material||'',
+        dimensioni: (p.ingly&&p.ingly.dimensioni)||'',
+      }))
+      .filter(r=>r.prompt_immagine);
+    if(!rows.length){ toast('Nessun prompt immagine trovato. Importa prima i prodotti Ingly.','warning',5000); return; }
+    const stamp = new Date().toISOString().slice(0,10);
+    const doJSON = () => {
+      const blob = new Blob([JSON.stringify({_app:'INGLY OS',_type:'image-prompts',_exported:new Date().toISOString(),_count:rows.length,prompts:rows},null,2)],{type:'application/json'});
+      const a=document.createElement('a'); a.href=URL.createObjectURL(blob); a.download='prompt_immagini_ingly_'+stamp+'.json'; a.click(); setTimeout(()=>URL.revokeObjectURL(a.href),4e4);
+      toast('✅ '+rows.length+' prompt esportati (JSON)','success',4000);
+    };
+    const doCSV = () => {
+      const q=v=>'"'+String(v==null?'':v).replace(/"/g,'""')+'"';
+      const head=['sku','nome','categoria','prompt_immagine','prompt_produzione','materiali','dimensioni'];
+      const csv=[head.join(',')].concat(rows.map(r=>head.map(k=>q(r[k])).join(','))).join('\r\n');
+      const a=document.createElement('a'); a.href='data:text/csv;charset=utf-8,﻿'+encodeURIComponent(csv); a.download='prompt_immagini_ingly_'+stamp+'.csv'; a.click();
+      toast('✅ '+rows.length+' prompt esportati (CSV)','success',4000);
+    };
+    // Overlay scelta formato
+    const ov=document.createElement('div');
+    ov.style.cssText='position:fixed;inset:0;background:rgba(0,0,0,.85);z-index:9700;display:flex;align-items:center;justify-content:center;padding:16px;backdrop-filter:blur(8px)';
+    ov.addEventListener('click',e=>{if(e.target===ov)ov.remove();});
+    ov.innerHTML=`<div style="background:var(--bg-card);border-radius:20px;width:100%;max-width:440px;border:1px solid var(--border2);box-shadow:0 32px 80px rgba(0,0,0,.8);overflow:hidden">
+      <div style="padding:22px 24px 16px;border-bottom:1px solid var(--border)">
+        <div style="font-size:17px;font-weight:800;color:var(--text);display:flex;align-items:center;gap:12px">
+          <div style="width:42px;height:42px;border-radius:12px;background:var(--primary-dim);border:1px solid var(--primary-border);display:flex;align-items:center;justify-content:center;font-size:20px">🖼️</div>
+          Esporta prompt immagini
+        </div>
+        <div style="font-size:12px;color:var(--text-muted);margin-top:6px;margin-left:54px">${rows.length} prompt pronti da incollare in un generatore esterno (Midjourney, GPT Image, FLUX…)</div>
+      </div>
+      <div style="padding:20px 24px;display:flex;flex-direction:column;gap:10px">
+        <button id="epi-json" style="width:100%;padding:12px;background:var(--primary);color:#0a0a0a;border:none;border-radius:9px;cursor:pointer;font-size:13px;font-weight:800">📦 Scarica JSON (strutturato)</button>
+        <button id="epi-csv" style="width:100%;padding:12px;background:var(--bg-card3);color:var(--text);border:1px solid var(--border2);border-radius:9px;cursor:pointer;font-size:13px;font-weight:700">📄 Scarica CSV (foglio di calcolo)</button>
+      </div>
+      <div style="padding:0 24px 18px;font-size:11px;color:var(--text-dim);line-height:1.5">💡 Genera le immagini fuori dal tool, poi caricale sul prodotto con il campo foto (tab Prodotto).</div>
+    </div>`;
+    document.body.appendChild(ov);
+    ov.querySelector('#epi-json').onclick=()=>{ ov.remove(); doJSON(); };
+    ov.querySelector('#epi-csv').onclick=()=>{ ov.remove(); doCSV(); };
   },
 
   async importExcel() {
