@@ -12014,7 +12014,7 @@ const Dashboard={
     await this.renderRecentSales();
     await this.renderRecentQuotes();
     await this.renderDueSoon();
-    await this.renderSmartActions();
+    if(typeof DashLayout!=='undefined'&&DashLayout.renderSmartActions) await DashLayout.renderSmartActions();
     // Connect DashboardToday widget
     setTimeout(()=>{ if(typeof DashboardToday!=='undefined') DashboardToday.inject(); },300);
     // Connect HealthScore
@@ -29054,7 +29054,7 @@ const Catalog={
         <div style="padding:12px;flex:1;display:flex;flex-direction:column;gap:6px">
           <div style="font-size:13px;font-weight:700;color:var(--text)">${p.name||'—'}</div>
           <div style="display:flex;justify-content:space-between;align-items:center">
-            <span style="font-size:12px;color:var(--primary);font-weight:700">${fmtCur(salePrice_)}</span>
+            <span style="font-size:12px;color:var(--primary);font-weight:700">${fmtCur(p.salePrice||p.price||0)}</span>
             ${margin>0?`<span style="font-size:10px;background:${margin>=30?'#22c55e20':'#f9731620'};color:${margin>=30?'#22c55e':'#f97316'};padding:2px 6px;border-radius:99px">${margin}%</span>`:''}
           </div>
           <div style="display:flex;justify-content:space-between;align-items:center">
