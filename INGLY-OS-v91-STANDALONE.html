@@ -29048,7 +29048,10 @@ const Catalog={
             <span style="font-size:12px;color:var(--primary);font-weight:700">${fmtCur(salePrice_)}</span>
             ${margin>0?`<span style="font-size:10px;background:${margin>=30?'#22c55e20':'#f9731620'};color:${margin>=30?'#22c55e':'#f97316'};padding:2px 6px;border-radius:99px">${margin}%</span>`:''}
           </div>
-          ${p.category?`<div style="font-size:10px;color:var(--text-muted)">${p.category}</div>`:''}
+          <div style="display:flex;justify-content:space-between;align-items:center">
+            ${p.category?`<span style="font-size:10px;color:var(--text-muted)">${p.category}</span>`:'<span></span>'}
+            ${p.ingly?`<span title="Scheda Ingly disponibile" style="font-size:9px;font-weight:800;background:var(--primary-dim);color:var(--primary);padding:2px 6px;border-radius:99px">🏭 Ingly</span>`:''}
+          </div>
         </div>
       </div>`;
     }).join('');
@@ -29102,6 +29105,9 @@ const Catalog={
 
           <!-- Price on photo bottom-right -->
           ${p.photo&&sp?`<div style="position:absolute;bottom:9px;right:10px;font-size:18px;font-weight:900;color:#fff;text-shadow:0 1px 6px rgba(0,0,0,.7)">${fmtCur(sp)}</div>`:''}
+
+          <!-- Ingly rich-data badge (scheda ufficiale) -->
+          ${p.ingly?`<div title="Scheda Ingly disponibile" style="position:absolute;bottom:9px;left:9px;background:var(--primary);color:#0a0a0a;font-size:9px;font-weight:800;padding:3px 8px;border-radius:99px;box-shadow:0 2px 8px rgba(0,0,0,.3)">🏭 Ingly</div>`:''}
 
           <!-- Hover overlay -->
           <div class="cat-hover-overlay" style="position:absolute;inset:0;background:rgba(0,0,0,.78);display:flex;flex-direction:column;align-items:center;justify-content:center;gap:8px;opacity:0;transition:.2s">
@@ -29436,7 +29442,29 @@ const Catalog={
       <div class="card-title">Prompt</div>
       ${promptBox('⚙️ Prompt di produzione',g.promptProduzione)}
       ${promptBox('🖼️ Prompt immagine catalogo',g.promptImmagine)}
+      ${g.promptImmagine?`
+      <div class="card-title" style="margin-top:6px">Varianti immagine <span style="font-weight:400;text-transform:none;letter-spacing:0;color:var(--text-dim)">— angolazione · luce · sfondo</span></div>
+      <div style="display:flex;flex-direction:column;gap:8px">
+        ${this._inglyImgVariants(g.promptImmagine).map(v=>`
+          <div style="display:flex;gap:10px;align-items:flex-start;background:var(--bg-card2);border:1px solid var(--border);border-radius:var(--radius-sm);padding:9px 11px">
+            <span style="flex:0 0 96px;font-size:10px;font-weight:800;color:var(--primary);text-transform:uppercase;letter-spacing:.5px;padding-top:2px">${esc(v.label)}</span>
+            <span style="flex:1;font-size:11px;color:var(--text-muted);font-family:var(--mono);line-height:1.5;word-break:break-word">${esc(v.text)}</span>
+            <button type="button" data-vp="${esc(v.text)}" onclick="navigator.clipboard&&navigator.clipboard.writeText(this.dataset.vp).then(()=>toast('Variante copiata','success',1500))" style="flex:0 0 auto;padding:4px 9px;background:var(--bg-card3);border:1px solid var(--border2);border-radius:6px;color:var(--text-muted);cursor:pointer;font-size:11px">📋</button>
+          </div>`).join('')}
+      </div>`:''}
     `;
+  },
+  // Fase D — genera varianti fotografiche dal prompt base (solo string-templating, nessuna chiamata esterna)
+  _inglyImgVariants(base){
+    const b=String(base||'').trim().replace(/\.*$/,'');
+    const mods=[
+      ['Front studio','front-on studio shot, soft diffused light, seamless off-white background, product centered'],
+      ['Tre quarti','45° three-quarter angle, warm golden-hour side light grazing the texture, rustic wood surface'],
+      ['Flat lay','top-down flat lay, bright even softbox light, neutral linen background, minimal props'],
+      ['Macro','close-up macro of the engraved detail, dramatic raking light, dark slate background, shallow depth of field'],
+      ['Lifestyle','lifestyle context, natural window light, softly blurred warm home interior in the background'],
+    ];
+    return mods.map(m=>({label:m[0], text:b+'. '+m[1]}));
   },
   // ──────────── SMART CALC ENGINE ────────────
   _MKEY:'ingly_laser_80w',
