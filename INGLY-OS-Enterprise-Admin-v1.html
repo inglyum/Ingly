@@ -537,12 +537,17 @@ create table if not exists public.ingly_audit (
   ts      timestamptz default now()
 );
 alter table public.ingly_users enable row level security;
+drop policy if exists open_pol on public.ingly_users;
 create policy open_pol on public.ingly_users for all using (true) with check (true);
 alter table public.ingly_sessions enable row level security;
+drop policy if exists open_pol on public.ingly_sessions;
 create policy open_pol on public.ingly_sessions for all using (true) with check (true);
 alter table public.ingly_audit enable row level security;
+drop policy if exists open_pol on public.ingly_audit;
 create policy open_pol on public.ingly_audit for all using (true) with check (true);
-alter publication supabase_realtime add table public.ingly_users;</textarea>
+do $$ begin
+  alter publication supabase_realtime add table public.ingly_users;
+exception when duplicate_object then null; when others then null; end $$;</textarea>
         <button class="btn btn-ghost btn-sm mt-8"
           onclick="navigator.clipboard.writeText(document.getElementById('supabase-sql').value).then(function(){toast('SQL copiato!','success')})">
           <i class="fas fa-copy"></i> Copia SQL
@@ -883,6 +888,16 @@ var InglyCloudAdmin = {
     return this._req('GET', 'ingly_users', null, 'select=count&limit=1');
   }
 };
+
+/* Auto-config cloud: se localStorage è vuoto, lo popola con i default del
+   progetto (Ingly 91) così tutte le funzioni che leggono da localStorage
+   (sync, test, ecc.) funzionano subito senza dover premere "Salva". */
+(function seedCloudConfig(){
+  try {
+    if (!localStorage.getItem('ingly_supabase_url')) localStorage.setItem('ingly_supabase_url', InglyCloudAdmin._url);
+    if (!localStorage.getItem('ingly_supabase_anon_key')) localStorage.setItem('ingly_supabase_anon_key', InglyCloudAdmin._key);
+  } catch(e) {}
+})();
 
 function doLogin(){
   const u=document.getElementById('l-user').value.trim();
