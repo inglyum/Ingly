@@ -622,6 +622,8 @@ const PLANS_CFG = {
   enterprise:{name:'Enterprise',price:199, color:'#a855f7', storage:200,moduleCount:113,
     modules:['*']},
 };
+// Applica eventuali pacchetti personalizzati salvati (editor piani).
+try { if (typeof loadPlansCfg === 'function') loadPlansCfg(); } catch(e) {}
 
 const ADMIN_ROLES = {
   superadmin:{name:'Super Admin',color:'var(--red)',perms:['*']},
@@ -2312,6 +2314,118 @@ function sendAllReminders(){ addAuditLog('reminders_sent_all','Tutti i gruppi');
 /* ═══════════════════════════════════════════════════════════
    PLAN MANAGEMENT
 ═══════════════════════════════════════════════════════════ */
+/* ═══════════════════════════════════════════════════════════
+   PLAN EDITOR — pacchetti personalizzabili (moduli per piano)
+═══════════════════════════════════════════════════════════ */
+// Elenco completo delle sezioni reali di INGLY OS (fonte di verità del gating).
+var ALL_MODULES = ['ai','ai-anomaly','ai-clv','ai-dashboard','ai-predictor','ai-reorder','aicoach','analytics','apparel','b2bpitch','backup','bank_funds','barcode','bizai','booking','brand_identity','briefing','bu','calendar','cashflow','catalog','clienti','clientintel','clients','cloud_updater','clv','competitormon','competitors','contentperf','crm','crm_pipeline','dashboard','decision','demand_map','dynamicprice','equipment','etsy_pulse','etsy_seo_wizard','etsyai','fiera','finance','fiscal','fixed_costs','forecaster','forecasting','gestione_ordini','goals','growthengine','history','ideas','imagelib','inglydesign','intel','items','kanban','kpi','lab_musthave','lab_setup','laser_b2b','lasercalc','laserresources','leadscorer','legal','listino','live_intel','magazzino','market_agent','market_intel','marketing','marketintel','monthly_report','opportunity','order_tracker','paints','payment_schedule','pdfmonth','photostudio','portabile','price_radar','prima_nota','print3d','product_hunter','profitscope','projects','quoteintel','quoter','recurring','replyai','reports','revsim','sales','sales_archive','scanner','settings','smartnotif','socialproof','socialstudio','stockalert','stockplanner','strategy','supplierintel','suppliers','taxcalendar','team','template_docs','timetracker','trendscanner','weeklyreport','workflow_dashboard','xmlsdi'];
+
+function _humanizeModule(id){
+  return id.replace(/[_-]+/g,' ').replace(/\b\w/g,function(c){return c.toUpperCase();});
+}
+
+// Carica gli override dei piani salvati (moduli/prezzo/storage) su PLANS_CFG.
+function loadPlansCfg(){
+  try {
+    var saved = JSON.parse(localStorage.getItem('ingly_plans_cfg') || 'null');
+    if (saved) {
+      Object.keys(saved).forEach(function(k){
+        if (PLANS_CFG[k]) {
+          if (Array.isArray(saved[k].modules)) PLANS_CFG[k].modules = saved[k].modules;
+          if (typeof saved[k].price === 'number') PLANS_CFG[k].price = saved[k].price;
+          if (typeof saved[k].storage === 'number') PLANS_CFG[k].storage = saved[k].storage;
+          PLANS_CFG[k].moduleCount = (PLANS_CFG[k].modules[0] === '*') ? ALL_MODULES.length : PLANS_CFG[k].modules.length;
+        }
+      });
+    }
+  } catch(e) {}
+}
+
+function _savePlansCfg(){
+  var out = {};
+  Object.keys(PLANS_CFG).forEach(function(k){
+    out[k] = { modules: PLANS_CFG[k].modules, price: PLANS_CFG[k].price, storage: PLANS_CFG[k].storage };
+  });
+  localStorage.setItem('ingly_plans_cfg', JSON.stringify(out));
+}
+
+function openPlanEditor(key){
+  var p = PLANS_CFG[key];
+  if (!p) return;
+  var isAll = p.modules[0] === '*';
+  var included = isAll ? ALL_MODULES.slice() : p.modules.slice();
+  var rows = ALL_MODULES.map(function(m){
+    var on = included.indexOf(m) > -1;
+    return '<label class="pe-mod" data-mod="'+m+'" style="display:flex;align-items:center;gap:8px;padding:7px 10px;border:1px solid var(--border);border-radius:var(--r);cursor:pointer;font-size:12px">'
+      + '<input type="checkbox" class="pe-cb" value="'+m+'" '+(on?'checked':'')+' style="width:16px;height:16px;accent-color:'+p.color+'">'
+      + '<span style="color:var(--text2)">'+_humanizeModule(m)+'</span>'
+      + '<span style="margin-left:auto;color:var(--text4);font-size:10px;font-family:monospace">'+m+'</span></label>';
+  }).join('');
+  openModal('<div class="modal" style="max-width:760px;width:96vw">'
+    + '<div class="modal-header"><div class="font-bold" style="color:'+p.color+'"><i class="fas fa-sliders-h"></i> Pacchetto '+p.name+'</div>'
+    + '<button class="btn btn-ghost btn-sm" onclick="closeModal()">✕</button></div>'
+    + '<div class="modal-body">'
+    + '<div class="flex gap-8 flex-wrap mb-12">'
+    + '<div class="form-group" style="flex:1;min-width:120px"><label>Nome</label><input id="pe-name" value="'+p.name+'"></div>'
+    + '<div class="form-group" style="width:120px"><label>Prezzo €/mese</label><input id="pe-price" type="number" value="'+p.price+'"></div>'
+    + '<div class="form-group" style="width:120px"><label>Storage GB</label><input id="pe-storage" type="number" value="'+p.storage+'"></div>'
+    + '</div>'
+    + '<div class="flex items-center gap-8 mb-8">'
+    + '<input id="pe-search" placeholder="🔎 Filtra moduli…" oninput="_peFilter()" style="flex:1">'
+    + '<button class="btn btn-ghost btn-sm" onclick="_peAll(true)">Tutti</button>'
+    + '<button class="btn btn-ghost btn-sm" onclick="_peAll(false)">Nessuno</button>'
+    + '<span id="pe-count" class="badge b-active"></span></div>'
+    + '<div id="pe-grid" style="display:grid;grid-template-columns:repeat(auto-fill,minmax(220px,1fr));gap:6px;max-height:46vh;overflow:auto;padding:2px">'+rows+'</div>'
+    + '</div>'
+    + '<div class="modal-footer" style="gap:8px">'
+    + '<label class="text-2xs text-dim" style="margin-right:auto;display:flex;align-items:center;gap:6px"><input type="checkbox" id="pe-apply" checked> Applica agli utenti '+p.name+' (+ sync cloud)</label>'
+    + '<button class="btn btn-ghost btn-sm" onclick="closeModal()">Annulla</button>'
+    + '<button class="btn btn-primary btn-sm" onclick="savePlanEditor(\''+key+'\')"><i class="fas fa-save"></i> Salva pacchetto</button>'
+    + '</div></div>');
+  _peUpdateCount();
+  document.getElementById('pe-grid').addEventListener('change', _peUpdateCount);
+}
+
+function _peFilter(){
+  var q = (document.getElementById('pe-search').value||'').toLowerCase();
+  document.querySelectorAll('#pe-grid .pe-mod').forEach(function(el){
+    var m = el.getAttribute('data-mod');
+    el.style.display = (!q || m.indexOf(q) > -1 || _humanizeModule(m).toLowerCase().indexOf(q) > -1) ? '' : 'none';
+  });
+}
+function _peAll(on){ document.querySelectorAll('#pe-grid .pe-cb').forEach(function(cb){ if(cb.closest('.pe-mod').style.display!=='none') cb.checked = on; }); _peUpdateCount(); }
+function _peUpdateCount(){
+  var n = document.querySelectorAll('#pe-grid .pe-cb:checked').length;
+  var b = document.getElementById('pe-count'); if (b) b.textContent = n + '/' + ALL_MODULES.length + ' moduli';
+}
+
+function savePlanEditor(key){
+  var p = PLANS_CFG[key]; if (!p) return;
+  var mods = Array.prototype.slice.call(document.querySelectorAll('#pe-grid .pe-cb:checked')).map(function(cb){ return cb.value; });
+  if (!mods.length) { toast('Seleziona almeno un modulo','error'); return; }
+  var name = (document.getElementById('pe-name').value||'').trim() || p.name;
+  var price = parseFloat(document.getElementById('pe-price').value) || p.price;
+  var storage = parseFloat(document.getElementById('pe-storage').value) || p.storage;
+  var applyUsers = document.getElementById('pe-apply').checked;
+  // Enterprise: se sono selezionati tutti i moduli, memorizza ['*']
+  var allSelected = mods.length === ALL_MODULES.length;
+  p.name = name; p.price = price; p.storage = storage;
+  p.modules = (key === 'enterprise' && allSelected) ? ['*'] : mods;
+  p.moduleCount = allSelected ? ALL_MODULES.length : mods.length;
+  _savePlansCfg();
+  var affected = 0;
+  if (applyUsers) {
+    (_db.users || []).forEach(function(u){
+      if (u.plan === key) { u.modules = p.modules; affected++; InglyCloudAdmin.syncUser(u).catch(function(){}); if (window.AdminCommandBus) AdminCommandBus.send('plan_change', {userId:u.id, newPlan:key, expiresAt:u.expiresAt}); }
+    });
+    dbSave(_db);
+  }
+  addAuditLog('plan_updated', name + ' — ' + p.moduleCount + ' moduli' + (applyUsers ? ' (' + affected + ' utenti)' : ''), key);
+  closeModal();
+  toast('✅ Pacchetto ' + name + ' salvato' + (applyUsers && affected ? ' · ' + affected + ' utenti aggiornati' : ''), 'success');
+  renderPlans();
+}
+
 function renderPlans(){
   document.getElementById('page-plans').innerHTML=`
     <div class="page-header">
@@ -2334,12 +2448,12 @@ function renderPlans(){
             </div>
             <div style="font-size:28px;font-weight:900;color:${p.color}">€${p.price}<span style="font-size:12px;font-weight:400;color:var(--text3)">/mese</span></div>
             <div class="divider mt-8 mb-8"></div>
-            <div class="text-2xs text-dim mb-4">📦 ${p.modules} moduli</div>
+            <div class="text-2xs text-dim mb-4">📦 ${p.moduleCount} moduli</div>
             <div class="text-2xs text-dim mb-4">💾 ${p.storage}GB storage</div>
             <div class="text-sm font-bold mt-4" style="color:${p.color}">${fmtMoney(rev)} MRR</div>
             <div class="divider mt-8 mb-8"></div>
             <div class="btn-group" style="flex-direction:column;gap:4px">
-              <button class="btn btn-ghost btn-sm" onclick="toast('Apertura editor piano '+${JSON.stringify(p.name)},'info')"><i class="fas fa-edit"></i> Modifica Piano</button>
+              <button class="btn btn-primary btn-sm" onclick="openPlanEditor('${key}')"><i class="fas fa-sliders-h"></i> Modifica Pacchetto</button>
               <button class="btn btn-ghost btn-sm" onclick="toast('${cnt} utenti notificati','success')"><i class="fas fa-bell"></i> Notifica Utenti</button>
             </div>
           </div>`;
@@ -2358,7 +2472,7 @@ function renderPlans(){
           </tr></thead>
           <tbody>
             ${[
-              ['Moduli INGLY OS','28','60','85','113'],
+              ['Moduli INGLY OS'].concat(Object.values(PLANS_CFG).map(function(p){return String(p.moduleCount);})),
               ['Storage','2GB','10GB','50GB','200GB'],
               ['Utenti per account','1','3','5','Illimitati'],
               ['AI Assistant','Base','Pro','Avanzato','Enterprise'],
