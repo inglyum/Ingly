@@ -95816,14 +95816,17 @@ console.log('[INGLY OS v34] ✅ SaaS Auth Gate · Module Lock · Roadmap v34');
     } catch(e) { return null; }
   }
 
-  /* ── 4. Supabase Cloud (OPT-IN, offline-first) ──
-     Nessuna auto-configurazione: la sync cloud si attiva SOLO se l'utente
-     inserisce le PROPRIE credenziali Supabase (Impostazioni → Cloud Sync).
-     Rimossi URL/chiave hardcoded: (1) app offline di default, (2) le copie
-     distribuite non puntano tutte allo stesso database, (3) nessun segreto nel
-     file. Chi ha già salvato credenziali proprie continua a sincronizzare. */
-  var _sbUrl = localStorage.getItem('ingly_supabase_url') || '';
-  var _sbKey = localStorage.getItem('ingly_supabase_anon_key') || '';
+  /* ── 4. Supabase Cloud (account online, condiviso con l'Admin) ──
+     Progetto INGLY di default così gli account creati dal pannello Admin sono
+     riconosciuti al login su qualunque dispositivo (login → prova cloud, poi
+     fallback localStorage). L'utente può puntare a un altro progetto salvando
+     le proprie credenziali (Impostazioni → Cloud Sync), che hanno la
+     precedenza. La anon key è pubblica per definizione (protetta da RLS lato
+     Supabase); NON è un segreto e coincide con quella già usata dall'Admin. */
+  var _SB_DEFAULT_URL = 'https://efphymfbjaxbtuujcgvr.supabase.co';
+  var _SB_DEFAULT_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImVmcGh5bWZiamF4YnR1dWpjZ3ZyIiwicm9sZSI6ImFub24iLCJpYXQiOjE3ODIyOTgyNTcsImV4cCI6MjA5Nzg3NDI1N30.s5vwCaNobMT9uHFsnn5wNM0ODeLOk1f1JGHNTo3dSOc';
+  var _sbUrl = localStorage.getItem('ingly_supabase_url') || _SB_DEFAULT_URL;
+  var _sbKey = localStorage.getItem('ingly_supabase_anon_key') || _SB_DEFAULT_KEY;
 
   function sbConfigured() { return !!(_sbUrl && _sbKey); }
 

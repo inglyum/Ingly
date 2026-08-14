@@ -37,13 +37,22 @@ export function assertEq(a, b, msg) { if (a !== b) throw new Error((msg || 'asse
 const IGNORED = [/read only property .?navigate/i];
 export function isIgnorableError(msg) { return IGNORED.some((re) => re.test(msg)); }
 
-export async function withPage(url, fn, { wait = 5000, viewport = { width: 1500, height: 900 }, auth = true } = {}) {
+export async function withPage(url, fn, { wait = 5000, viewport = { width: 1500, height: 900 }, auth = true, blockHosts = [] } = {}) {
   const pw = await loadPlaywright();
   const browser = await pw.chromium.launch();
   const page = await browser.newPage();
   await page.setViewportSize(viewport);
   const errors = [];
   page.on('pageerror', (e) => { if (!isIgnorableError(e.message)) errors.push(e.message); });
+  // Blocca host esterni (es. Supabase) per test offline deterministici: la
+  // richiesta viene abortita subito e il gate cade sul fallback localStorage.
+  if (blockHosts.length) {
+    await page.route('**/*', (route) => {
+      const u = route.request().url();
+      if (blockHosts.some((h) => u.includes(h))) return route.abort();
+      return route.continue();
+    });
+  }
   await page.addInitScript(() => { try { localStorage.setItem('_wizard_done_v37', '1'); } catch (e) {} });
   // Il SaaS Auth Gate (v92+) mette in pausa App.init finché non c'è una sessione:
   // di default iniettiamo una sessione owner Enterprise così i test girano

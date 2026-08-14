@@ -10,7 +10,9 @@ console.log(`Test auth gate su INGLY-OS v${version}`);
 // Carica il monolite SENZA sessione saas iniettata ({ auth:false }), così il
 // gate di login deve comparire e possiamo testarlo.
 async function withGate(fn, opts = {}) {
-  return withPage(url, fn, { auth: false, wait: 2500, ...opts });
+  // blockHosts: il gate ora punta di default a Supabase; in test lo blocchiamo
+  // così il login owner/standalone cade subito sul fallback localStorage.
+  return withPage(url, fn, { auth: false, wait: 2500, blockHosts: ['supabase.co'], ...opts });
 }
 
 describe('SaaS Auth Gate', (s) => {
