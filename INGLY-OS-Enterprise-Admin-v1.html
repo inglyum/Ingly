@@ -475,11 +475,11 @@ tbody tr:hover td{background:#ffffff02}
         </div>
         <div class="form-group mb-8">
           <label>Supabase URL</label>
-          <input id="sb-url" placeholder="https://xxxx.supabase.co" value="https://efphymfbjaxbtuujcgvr.supabase.co" style="font-family:monospace">
+          <input id="sb-url" placeholder="https://xxxx.supabase.co" value="https://dhfuokioyuytbxxgoilp.supabase.co" style="font-family:monospace">
         </div>
         <div class="form-group mb-12">
           <label>Anon Key</label>
-          <input id="sb-key" placeholder="eyJhbGci..." value="eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImVmcGh5bWZiamF4YnR1dWpjZ3ZyIiwicm9sZSI6ImFub24iLCJpYXQiOjE3ODIyOTgyNTcsImV4cCI6MjA5Nzg3NDI1N30.s5vwCaNobMT9uHFsnn5wNM0ODeLOk1f1JGHNTo3dSOc" style="font-family:monospace;font-size:10px">
+          <input id="sb-key" placeholder="sb_publishable_..." value="sb_publishable_IcqOjv4qBkY3utNgmqNi7Q_oGntPKbY" style="font-family:monospace;font-size:10px">
         </div>
         <div class="btn-group">
           <button class="btn btn-primary" onclick="saveSupabaseConfig()">
@@ -814,8 +814,8 @@ function resetAdminDB(){
    Fallback automatico su localStorage se non configurato.
 ─────────────────────────────────────────────────────────────── */
 var InglyCloudAdmin = {
-  _url: localStorage.getItem('ingly_supabase_url') || 'https://efphymfbjaxbtuujcgvr.supabase.co',
-  _key: localStorage.getItem('ingly_supabase_anon_key') || 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImVmcGh5bWZiamF4YnR1dWpjZ3ZyIiwicm9sZSI6ImFub24iLCJpYXQiOjE3ODIyOTgyNTcsImV4cCI6MjA5Nzg3NDI1N30.s5vwCaNobMT9uHFsnn5wNM0ODeLOk1f1JGHNTo3dSOc',
+  _url: localStorage.getItem('ingly_supabase_url') || 'https://dhfuokioyuytbxxgoilp.supabase.co',
+  _key: localStorage.getItem('ingly_supabase_anon_key') || 'sb_publishable_IcqOjv4qBkY3utNgmqNi7Q_oGntPKbY',
 
   isConfigured: function() {
     return !!(this._url && this._key);
@@ -1050,7 +1050,7 @@ function saveSupabaseConfig() {
   var key = (document.getElementById('sb-key').value||'').trim();
   if (!url || !key) { toast('Inserisci URL e chiave','error'); return; }
   if (!url.includes('supabase.co')) { toast('URL non sembra valido (deve contenere supabase.co)','error'); return; }
-  if (!key.startsWith('eyJ')) { toast('Chiave non sembra valida (deve iniziare con eyJ)','error'); return; }
+  if (!(key.startsWith('eyJ') || key.startsWith('sb_publishable_') || key.startsWith('sb_secret_'))) { toast('Chiave non valida (deve iniziare con eyJ… o sb_publishable_…)','error'); return; }
   localStorage.setItem('ingly_supabase_url', url);
   localStorage.setItem('ingly_supabase_anon_key', key);
   if (window.InglyCloudAdmin) InglyCloudAdmin.configure(url, key);
