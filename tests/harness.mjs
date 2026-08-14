@@ -37,7 +37,7 @@ export function assertEq(a, b, msg) { if (a !== b) throw new Error((msg || 'asse
 const IGNORED = [/read only property .?navigate/i];
 export function isIgnorableError(msg) { return IGNORED.some((re) => re.test(msg)); }
 
-export async function withPage(url, fn, { wait = 5000, viewport = { width: 1500, height: 900 } } = {}) {
+export async function withPage(url, fn, { wait = 5000, viewport = { width: 1500, height: 900 }, auth = true } = {}) {
   const pw = await loadPlaywright();
   const browser = await pw.chromium.launch();
   const page = await browser.newPage();
@@ -45,6 +45,21 @@ export async function withPage(url, fn, { wait = 5000, viewport = { width: 1500,
   const errors = [];
   page.on('pageerror', (e) => { if (!isIgnorableError(e.message)) errors.push(e.message); });
   await page.addInitScript(() => { try { localStorage.setItem('_wizard_done_v37', '1'); } catch (e) {} });
+  // Il SaaS Auth Gate (v92+) mette in pausa App.init finché non c'è una sessione:
+  // di default iniettiamo una sessione owner Enterprise così i test girano
+  // sull'app sbloccata. Con { auth:false } NON la iniettiamo, per poter testare
+  // il gate stesso (login screen, credenziali, gating).
+  if (auth) {
+    await page.addInitScript(() => {
+      try {
+        sessionStorage.setItem('ingly_saas_session', JSON.stringify({
+          id: 'test-owner', userId: 'test-owner', username: 'owner', labName: 'INGLY OS',
+          plan: 'enterprise', modules: ['*'], expiresAt: null, status: 'lifetime',
+          loginAt: new Date().toISOString(),
+        }));
+      } catch (e) {}
+    });
+  }
   await page.goto(url, { waitUntil: 'domcontentloaded', timeout: 60000 });
   await page.waitForTimeout(wait);
   try { return await fn(page, errors); }
