@@ -1417,13 +1417,21 @@ tr:hover td{ box-shadow: inset 3px 0 0 -1px var(--primary-border); }
         <div class="nav-item" data-section="competitormon" onclick="App.navigate('competitormon')" style="color:#fb923c;font-weight:700"><i class="fas fa-crosshairs"></i> 🎯 Competitor Monitor</div>
     </div>
     </div>
+    <div class="nav-group" id="ng-preventivi">
+      <div class="nav-group-title ng-header" onclick="NavGroups.toggle('ng-preventivi')" style="display:flex;align-items:center;gap:8px"><i class="nav-group-icon fas fa-file-invoice-dollar" style="font-size:13px;color:#818cf8;width:16px;text-align:center;flex-shrink:0"></i><span class="ng-label" style="flex:1">Preventivi</span><span class="ng-chevron" style="font-size:9px;opacity:.5">▼</span></div>
+      <div class="nav-group-items">
+      <div class="nav-item" data-section="quoter" onclick="App.navigate('quoter')" style="font-weight:700;color:#818cf8"><i class="fas fa-calculator"></i> Smart Quoter</div>
+      <div class="nav-item" data-section="apparel" onclick="App.navigate('apparel')" style="color:#ec4899;font-weight:700" title="Preventivi DTF, Sublimazione, Pressa, Ricamo"><i class="fas fa-tshirt"></i> 👕 Smart Quote Apparel</div>
+      <div class="nav-item" data-section="print3d" onclick="App.navigate('print3d')" style="color:#22d3ee;font-weight:700" title="Preventivi FDM e Resina"><i class="fas fa-cube"></i> 🖨️ Smart Quote 3D</div>
+      <div class="nav-item" data-section="lasercalc" onclick="App.navigate('lasercalc')" style="color:#a5b4fc;font-weight:700"><i class="fas fa-bolt"></i> ⚡ Calc Laser</div>
+      <div class="nav-item" data-section="quoteintel" onclick="App.navigate('quoteintel')" style="color:#a78bfa;font-weight:700"><i class="fas fa-chart-pie"></i> Quote Intelligence 🎯</div>
+      </div>
+    </div>
+
     <div class="nav-group" id="ng-pipeline">
       <div class="nav-group-title ng-header" onclick="NavGroups.toggle('ng-pipeline')" style="display:flex;align-items:center;gap:8px"><i class="nav-group-icon fas fa-briefcase" style="font-size:13px;color:#fbbf24;width:16px;text-align:center;flex-shrink:0"></i><span class="ng-label" style="flex:1">Gestione Lavori</span><span class="ng-chevron" style="font-size:9px;opacity:.5">▼</span></div>
       <div class="nav-group-items">
-      <div class="nav-item" data-section="quoter" onclick="App.navigate('quoter')"><i class="fas fa-calculator"></i> Smart Quoter</div>
       <div class="nav-item" data-section="template_docs" onclick="App.navigate('template_docs')" style="color:#d4af37;font-weight:700"><i class="fas fa-palette"></i> 🎨 Template Documenti</div>
-      <div class="nav-item" data-section="quoteintel" onclick="App.navigate('quoteintel')" style="color:#a78bfa;font-weight:700"><i class="fas fa-chart-pie"></i> Quote Intelligence 🎯</div>
-      <div class="nav-item" data-section="lasercalc" onclick="App.navigate('lasercalc')" style="color:#a5b4fc;font-weight:700"><i class="fas fa-bolt"></i> ⚡ 🧮 Calc Laser</div>
       <div class="nav-item" data-section="gestione_ordini" onclick="App.navigate('gestione_ordini')" style="background:linear-gradient(90deg,#6366f115,transparent);font-weight:700;color:#818cf8"><i class="fas fa-layer-group"></i> 🔄 Ordini & Workflow</div>
       
       
@@ -1448,8 +1456,6 @@ tr:hover td{ box-shadow: inset 3px 0 0 -1px var(--primary-border); }
       <div class="nav-item" data-section="bank_funds" onclick="App.navigate('bank_funds')" style="color:#10b981;font-weight:700">🏦 Bank &amp; Funds</div>
       <div class="nav-item" data-section="laser_b2b" onclick="App.navigate('laser_b2b')" style="color:#fbbf24;font-weight:700">💼 Laser B2B</div>
       <div class="nav-item" data-section="market_intel" onclick="App.navigate('market_intel')" style="color:#a855f7;font-weight:700">🧠 AI Intel Hub</div>
-      <div class="nav-item" data-section="apparel" onclick="App.navigate('apparel')" style="color:#ec4899;font-weight:700" title="Preventivi DTF, Sublimazione, Pressa, Ricamo"><i class="fas fa-tshirt"></i> 👕 Smart Quote Apparel</div>
-      <div class="nav-item" data-section="print3d" onclick="App.navigate('print3d')" style="color:#22d3ee;font-weight:700" title="Preventivi FDM e Resina"><i class="fas fa-cube"></i> 🖨️ Smart Quote 3D</div>
       <div class="nav-item" data-section="competitors" onclick="App.navigate('competitors')" style="color:#f97316;font-weight:700" title="Analisi competitors laser e personalizzazione"><i class="fas fa-binoculars"></i> 🔍 Competitors</div>
     </div>
     </div>
@@ -95938,9 +95944,15 @@ console.log('[INGLY OS v34] ✅ SaaS Auth Gate · Module Lock · Roadmap v34');
       }
       sbUpdate(user.id, updateData);
 
+      var _plan = user.plan || user.plan_id || 'starter';
+      var _isOwner = (user.username === 'owner') || (user.id === 'standalone-owner') || (user.email === 'owner@ingly.io');
+      // L'owner è il super-account: sempre Enterprise, accesso totale.
+      if (_isOwner) _plan = 'enterprise';
       var modules = user.modules || user.modules_json;
       if (typeof modules === 'string') { try { modules = JSON.parse(modules); } catch(e) { modules = null; } }
-      if (!modules || typeof modules === 'number') modules = getModules(user.plan || user.plan_id || 'starter');
+      if (!modules || typeof modules === 'number' || (Array.isArray(modules) && modules.length === 0)) modules = getModules(_plan);
+      // Enterprise (e owner) = accesso a tutto, ignora eventuali modules_json stantii.
+      if (_isOwner || _plan === 'enterprise' || (Array.isArray(modules) && modules.indexOf('*') > -1)) modules = ['*'];
 
       var expiry = user.expiresAt || user.expires_at;
       if (!expiry && (user.status || user.plan_id) !== 'lifetime') {
@@ -95951,7 +95963,7 @@ console.log('[INGLY OS v34] ✅ SaaS Auth Gate · Module Lock · Roadmap v34');
         id: user.id, userId: user.id,
         username: user.username,
         labName: user.lab_name || user.labName || user.company || user.username,
-        plan: user.plan || user.plan_id || 'starter',
+        plan: _plan,
         modules: modules,
         expiresAt: expiry,
         status: user.status || 'active',
