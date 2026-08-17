@@ -105083,6 +105083,7 @@ html, body{ overflow-x:hidden; max-width:100vw; }
     border-radius:8px; font-size:13px; transition:.12s; }
   .tb-more-item:hover{ background:color-mix(in srgb, var(--primary,#fbbf24) 14%, transparent); color:var(--primary,#fbbf24); }
   .tb-more-item i{ width:18px; text-align:center; opacity:.85; }
+  #topbar button.topbar-btn.tb-collapsed{ display:none !important; }
   `;
   var st=document.createElement('style'); st.id='tb-tidy-css'; st.textContent=css;
   (document.head||document.documentElement).appendChild(st);
@@ -105122,9 +105123,20 @@ html, body{ overflow-x:hidden; max-width:100vw; }
       item.addEventListener('click', function(){ try{ (new Function(oc)).call(btn); }catch(e){}
         menu.classList.remove('open'); });
       menu.appendChild(item);
-      btn.style.display='none'; moved++;
+      btn.classList.add('tb-collapsed'); moved++;
     });
     if(!moved) return; // niente da spostare
+
+    // Ri-nasconde le scorciatoie anche se il topbar viene ri-renderizzato dopo.
+    function hideShortcuts(){
+      var bb=document.getElementById('topbar'); if(!bb) return;
+      Array.prototype.slice.call(bb.querySelectorAll('button.topbar-btn')).forEach(function(b){
+        var oc=b.getAttribute('onclick')||'';
+        if(COLLAPSE.some(function(s){ return s.re.test(oc); })) b.classList.add('tb-collapsed');
+      });
+    }
+    hideShortcuts();
+    setInterval(hideShortcuts, 1500);
 
     // inserisci il menu vicino ai toggle tema/lingua (in coda alla barra)
     var themeBtn=document.getElementById('theme-toggle-btn');
