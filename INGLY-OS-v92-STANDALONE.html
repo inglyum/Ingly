@@ -105164,12 +105164,17 @@ html, body{ overflow-x:hidden; max-width:100vw; }
     });
     if(!moved) return; // niente da spostare
 
-    // Ri-nasconde le scorciatoie anche se il topbar viene ri-renderizzato dopo.
+    // Duplicati dell'header viola (Enterprise Header): la barra viola offre già
+    // Ricerca e Impostazioni, quindi qui li nascondiamo per evitare doppioni.
+    // NB: Notifiche e Tema restano (sono sistemi diversi, non duplicati).
+    var DUP_HIDE=[/GlobalSearch/, /navigate\('settings'\)/];
+    // Ri-nasconde scorciatoie e duplicati anche se il topbar viene ri-renderizzato.
     function hideShortcuts(){
       var bb=document.getElementById('topbar'); if(!bb) return;
       Array.prototype.slice.call(bb.querySelectorAll('button.topbar-btn')).forEach(function(b){
         var oc=b.getAttribute('onclick')||'';
         if(COLLAPSE.some(function(s){ return s.re.test(oc); })) b.classList.add('tb-collapsed');
+        if(DUP_HIDE.some(function(re){ return re.test(oc); })) b.classList.add('tb-collapsed');
       });
     }
     hideShortcuts();
