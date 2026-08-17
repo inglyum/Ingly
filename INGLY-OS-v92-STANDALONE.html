@@ -95470,11 +95470,39 @@ console.log('[INGLY OS v33] ✅ SmartSearch · PWA · Roadmap overlay caricati')
   `;
   document.body.appendChild(gateEl);
 
+  // ── STRIPE BILLING (Payment Links, no-backend) ─────────────────
+  // I link di pagamento si configurano dall'Admin (uno per piano) e si salvano
+  // in localStorage['ingly_stripe_links']. Finché non ci sono, si ricade sulla
+  // richiesta via email. Il webhook Stripe (Edge Function) attiva la licenza.
+  var _STRIPE_LINKS = {};
+  try { _STRIPE_LINKS = JSON.parse(localStorage.getItem('ingly_stripe_links') || '{}'); } catch(e){}
+  window.InglyBilling = {
+    linkFor: function(plan){ return (_STRIPE_LINKS && _STRIPE_LINKS[plan]) || ''; },
+    isConfigured: function(){ return !!(_STRIPE_LINKS && (_STRIPE_LINKS.pro || _STRIPE_LINKS.business || _STRIPE_LINKS.enterprise || _STRIPE_LINKS.starter)); },
+    subscribe: function(plan){
+      var s = window.SaaSGate && window.SaaSGate._session;
+      var url = this.linkFor(plan);
+      if(!url){
+        var body = encodeURIComponent('Vorrei attivare il piano ' + String(plan||'').toUpperCase() + '. Utente: ' + ((s&&s.username)||''));
+        window.open('mailto:inglydesign@gmail.com?subject=Abbonamento INGLY OS&body=' + body, '_blank');
+        return;
+      }
+      try {
+        var u = new URL(url);
+        if(s && s.username) u.searchParams.set('client_reference_id', s.username);
+        if(s && s.email) u.searchParams.set('prefilled_email', s.email);
+        window.open(u.toString(), '_blank');
+      } catch(e){ window.open(url, '_blank'); }
+    }
+  };
+
   // ── UPGRADE MODAL ──────────────────────────────────────────────
   function showUpgradeModal(sectionName, plan){
     var planColors = {starter:'#06b6d4', pro:'#6366f1', business:'#f59e0b', enterprise:'#a855f7'};
     var nextMap = {starter:'Pro', pro:'Business', business:'Enterprise', enterprise:'Enterprise'};
+    var nextKeyMap = {starter:'pro', pro:'business', business:'enterprise', enterprise:'enterprise'};
     var nextPlan = nextMap[plan] || 'Pro';
+    var nextKey = nextKeyMap[plan] || 'pro';
     var modal = document.createElement('div');
     modal.id = 'saas-upgrade-modal';
     modal.style.cssText = 'position:fixed;inset:0;z-index:99990;background:#000c;display:flex;align-items:center;justify-content:center;padding:20px;font-family:Inter,system-ui,sans-serif';
@@ -95487,13 +95515,13 @@ console.log('[INGLY OS v33] ✅ SmartSearch · PWA · Roadmap overlay caricati')
           Chiedi all'amministratore di aggiornare la tua licenza al piano <strong style="color:#6366f1">${nextPlan}</strong> o di abilitare questo modulo specifico.
         </div>
         <div style="display:flex;gap:10px;justify-content:center;flex-wrap:wrap">
-          <button onclick="document.getElementById('saas-upgrade-modal').remove();App.navigate('dashboard')" 
-            style="padding:10px 20px;background:#6366f1;color:#fff;border:none;border-radius:8px;cursor:pointer;font-weight:700;font-size:13px">
-            ← Torna alla Dashboard
+          <button onclick="InglyBilling.subscribe('${nextKey}')"
+            style="padding:10px 20px;background:linear-gradient(135deg,#635bff,#4f46e5);color:#fff;border:none;border-radius:8px;cursor:pointer;font-weight:700;font-size:13px">
+            💳 Abbonati a ${nextPlan}
           </button>
-          <button onclick="document.getElementById('saas-upgrade-modal').remove()"
-            style="padding:10px 20px;background:transparent;color:#6b6b88;border:1px solid #2a2a35;border-radius:8px;cursor:pointer;font-size:13px">
-            Chiudi
+          <button onclick="document.getElementById('saas-upgrade-modal').remove();App.navigate('dashboard')"
+            style="padding:10px 20px;background:transparent;color:#818cf8;border:1px solid #2a2a35;border-radius:8px;cursor:pointer;font-weight:700;font-size:13px">
+            ← Dashboard
           </button>
         </div>
       </div>`;

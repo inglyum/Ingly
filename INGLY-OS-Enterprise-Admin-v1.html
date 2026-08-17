@@ -493,6 +493,16 @@ tbody tr:hover td{background:#ffffff02}
           </button>
         </div>
         <div id="sb-test-result" class="mt-8"></div>
+
+        <div class="divider mt-16 mb-12"></div>
+        <div class="font-bold mb-4"><i class="fab fa-stripe" style="color:#635bff"></i> Stripe — Payment Links (abbonamenti)</div>
+        <div class="text-2xs text-dim mb-12">Incolla il link di pagamento di ogni piano (Stripe → Payment Links). Vedi <code>docs/SETUP-STRIPE.md</code>.</div>
+        <div class="form-group mb-8"><label>Link Starter (€19)</label><input id="stripe-starter" placeholder="https://buy.stripe.com/..." style="font-family:monospace;font-size:10px"></div>
+        <div class="form-group mb-8"><label>Link Pro (€49)</label><input id="stripe-pro" placeholder="https://buy.stripe.com/..." style="font-family:monospace;font-size:10px"></div>
+        <div class="form-group mb-8"><label>Link Business (€99)</label><input id="stripe-business" placeholder="https://buy.stripe.com/..." style="font-family:monospace;font-size:10px"></div>
+        <div class="form-group mb-8"><label>Link Enterprise (€199)</label><input id="stripe-enterprise" placeholder="https://buy.stripe.com/..." style="font-family:monospace;font-size:10px"></div>
+        <button class="btn btn-primary" onclick="saveStripeLinks()"><i class="fas fa-save"></i> Salva Payment Links</button>
+        <div id="stripe-save-result" class="mt-8"></div>
       </div>
       <div class="card">
         <div class="card-title mb-8">SQL da eseguire su Supabase</div>
@@ -1060,6 +1070,30 @@ function _updateCloudBadge() {
     badge.textContent = configured ? '✅ Cloud attivo' : '⚠️ Non configurato';
     badge.className = 'badge ' + (configured ? 'b-ok' : 'b-warn');
   }
+}
+
+function saveStripeLinks() {
+  var links = {
+    starter:    (document.getElementById('stripe-starter').value||'').trim(),
+    pro:        (document.getElementById('stripe-pro').value||'').trim(),
+    business:   (document.getElementById('stripe-business').value||'').trim(),
+    enterprise: (document.getElementById('stripe-enterprise').value||'').trim(),
+  };
+  var bad = Object.keys(links).filter(function(k){ return links[k] && !/^https:\/\/(buy\.)?stripe\.com\//.test(links[k]); });
+  if (bad.length) { toast('Link non validi (devono iniziare con https://buy.stripe.com/): ' + bad.join(', '), 'error'); return; }
+  Object.keys(links).forEach(function(k){ if(!links[k]) delete links[k]; });
+  localStorage.setItem('ingly_stripe_links', JSON.stringify(links));
+  var res = document.getElementById('stripe-save-result');
+  if (res) res.innerHTML = '<span style="color:var(--green)">✅ ' + Object.keys(links).length + ' link salvati. Ora nell’OS il pulsante “Abbonati” porta al pagamento.</span>';
+  toast('✅ Payment Links salvati', 'success');
+}
+function _prefillStripeLinks() {
+  try {
+    var l = JSON.parse(localStorage.getItem('ingly_stripe_links') || '{}');
+    ['starter','pro','business','enterprise'].forEach(function(k){
+      var el = document.getElementById('stripe-' + k); if (el && l[k]) el.value = l[k];
+    });
+  } catch(e) {}
 }
 
 function saveSupabaseConfig() {
@@ -3995,6 +4029,7 @@ upgradePlan = function(id){
 })();
 
 document.addEventListener('DOMContentLoaded', function() {
+  try { _prefillStripeLinks(); } catch(e) {}
   try {
     // Pre-fill via JS (browsers ignore value="" on type=password)
     var passEl = document.getElementById('l-pass');
