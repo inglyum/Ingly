@@ -95414,6 +95414,9 @@ console.log('[INGLY OS v33] ✅ SmartSearch · PWA · Roadmap overlay caricati')
     #saas-gate .gate-btn:hover { transform:translateY(-1px);box-shadow:0 14px 34px #4f46e555; }
     #saas-gate .gate-btn:active { transform:translateY(0); }
     #saas-gate .gf-help { margin-top:20px;font-size:11.5px;color:#57536b;text-align:center; }
+    #saas-gate .gf-switch { margin-top:16px;font-size:12.5px;color:#8a86a0;text-align:center; }
+    #saas-gate .gf-switch a { color:#a5a0f5;font-weight:700;cursor:pointer; }
+    #saas-gate .gf-switch a:hover { text-decoration:underline; }
     @media (max-width:820px) {
       #saas-gate .gate-shell { grid-template-columns:1fr;max-width:420px; }
       #saas-gate .gate-brand { display:none; }
@@ -95492,16 +95495,30 @@ console.log('[INGLY OS v33] ✅ SmartSearch · PWA · Roadmap overlay caricati')
       </aside>
       <section class="gate-form">
         <div class="gf-logo-mobile">🎨 INGLY <span>OS</span></div>
-        <h1 class="gf-title">Bentornato</h1>
-        <p class="gf-sub">Accedi alla tua licenza INGLY</p>
-        <div class="iw"><i class="fas fa-user"></i><input id="gate-user" type="text" placeholder="Username" autocomplete="username"></div>
-        <div class="iw"><i class="fas fa-lock"></i><input id="gate-pass" type="password" placeholder="Password" autocomplete="current-password" onkeydown="if(event.key==='Enter')SaaSGate.login()"></div>
-        <button class="gate-btn" id="gate-submit" onclick="SaaSGate.login()">
-          <i class="fas fa-arrow-right-to-bracket"></i> Accedi
-        </button>
-        <div class="gate-err" id="gate-err"></div>
-        <div class="gate-hint" id="gate-hint"></div>
-        <div class="gf-help">Problemi di accesso? Contatta il tuo amministratore INGLY</div>
+        <h1 class="gf-title" id="gf-title">Bentornato</h1>
+        <p class="gf-sub" id="gf-sub">Accedi alla tua licenza INGLY</p>
+        <div id="gate-login">
+          <div class="iw"><i class="fas fa-user"></i><input id="gate-user" type="text" placeholder="Username" autocomplete="username"></div>
+          <div class="iw"><i class="fas fa-lock"></i><input id="gate-pass" type="password" placeholder="Password" autocomplete="current-password" onkeydown="if(event.key==='Enter')SaaSGate.login()"></div>
+          <button class="gate-btn" id="gate-submit" onclick="SaaSGate.login()">
+            <i class="fas fa-arrow-right-to-bracket"></i> Accedi
+          </button>
+          <div class="gate-err" id="gate-err"></div>
+          <div class="gate-hint" id="gate-hint"></div>
+          <div class="gf-switch">Nuovo su INGLY? <a onclick="SaaSGate.showRegister()">Prova gratis 14 giorni →</a></div>
+        </div>
+        <div id="gate-register" style="display:none">
+          <div class="iw"><i class="fas fa-store"></i><input id="reg-lab" type="text" placeholder="Nome del laboratorio"></div>
+          <div class="iw"><i class="fas fa-user"></i><input id="reg-user" type="text" placeholder="Username" autocomplete="username"></div>
+          <div class="iw"><i class="fas fa-envelope"></i><input id="reg-email" type="email" placeholder="Email" autocomplete="email"></div>
+          <div class="iw"><i class="fas fa-lock"></i><input id="reg-pass" type="password" placeholder="Password (min 6)" autocomplete="new-password" onkeydown="if(event.key==='Enter')SaaSGate.register()"></div>
+          <button class="gate-btn" id="reg-submit" onclick="SaaSGate.register()">
+            <i class="fas fa-rocket"></i> Crea account e prova gratis
+          </button>
+          <div class="gate-err" id="reg-err"></div>
+          <div class="gf-switch">Hai già un account? <a onclick="SaaSGate.showLogin()">Accedi</a></div>
+        </div>
+        <div class="gf-help">Ingly Design · assistenza: inglydesign@gmail.com</div>
       </section>
     </div>
   `;
@@ -96114,6 +96131,55 @@ console.log('[INGLY OS v34] ✅ SaaS Auth Gate · Module Lock · Roadmap v34');
     }
   }
 
+  /* ── 5b. Registrazione self-service + trial 14 giorni ──
+     Crea un utente (piano Pro in prova) su Supabase (RLS aperta) e in locale,
+     poi effettua il login. Nessun backend necessario. */
+  function _regUid(){ return 'u'+Date.now().toString(36)+Math.random().toString(36).slice(2,6); }
+  function doRegister(){
+    var lab = (document.getElementById('reg-lab').value||'').trim();
+    var user = (document.getElementById('reg-user').value||'').trim();
+    var email = (document.getElementById('reg-email').value||'').trim();
+    var pass = document.getElementById('reg-pass').value;
+    var err = document.getElementById('reg-err');
+    var btn = document.getElementById('reg-submit');
+    err.style.display='none';
+    if(!lab || !user || !email || !pass){ err.textContent='Compila tutti i campi'; err.style.display='block'; return; }
+    if(pass.length<6){ err.textContent='Password troppo corta (min 6 caratteri)'; err.style.display='block'; return; }
+    if(!/^[^@\s]+@[^@\s]+\.[^@\s]+$/.test(email)){ err.textContent='Email non valida'; err.style.display='block'; return; }
+    if(!/^[a-zA-Z0-9._-]{3,}$/.test(user)){ err.textContent='Username: min 3 caratteri (lettere, numeri, . _ -)'; err.style.display='block'; return; }
+    // username già in uso in locale?
+    var db = loadDB() || {users:[]}; db.users = db.users || [];
+    if(db.users.some(function(u){ return u.username===user; })){ err.textContent='Username già in uso'; err.style.display='block'; return; }
+    btn.disabled=true; btn.innerHTML='<i class="fas fa-spinner fa-spin"></i> Creazione...';
+    function finish(){
+      // login automatico riusando doLogin
+      var gu=document.getElementById('gate-user'), gp=document.getElementById('gate-pass');
+      if(gu&&gp){ gu.value=user; gp.value=pass; }
+      SaaSGate.showLogin();
+      window.SaaSGate.login();
+    }
+    function create(){
+      var trialDays=14;
+      var u={ id:_regUid(), username:user, email:email, labName:lab,
+        plan:'pro', plan_id:'pro', status:'trial',
+        modules:getModules('pro'), active:true,
+        expiresAt:new Date(Date.now()+trialDays*86400000).toISOString(),
+        passwordHash:pass, password_hash:pass, createdAt:new Date().toISOString() };
+      db.users.unshift(u);
+      try{ localStorage.setItem('ingly_saas_db', JSON.stringify(db)); }catch(e){}
+      // sync su Supabase (best-effort)
+      try{ if(typeof sbUpsert==='function') sbUpsert(u); }catch(e){}
+      setTimeout(finish, 400);
+    }
+    // controllo unicità username anche su cloud, poi crea
+    if(typeof sbConfigured==='function' && sbConfigured() && typeof sbGet==='function'){
+      sbGet(user).then(function(existing){
+        if(existing){ btn.disabled=false; btn.innerHTML='Crea account e prova gratis'; err.textContent='Username già registrato'; err.style.display='block'; }
+        else create();
+      }).catch(function(){ create(); }); // se il cloud non risponde, crea comunque in locale
+    } else { create(); }
+  }
+
   /* ── 6. Monitor sessione (30s) ── */
   var _monitorTimer = null;
 
@@ -96344,6 +96410,20 @@ console.log('[INGLY OS v34] ✅ SaaS Auth Gate · Module Lock · Roadmap v34');
         var b  = document.getElementById('gate-submit');
         if (!u || !p || !e) return;
         doLogin(u.value.trim(), p.value, e, b);
+      };
+      /* Registrazione self-service + toggle login/registrazione */
+      window.SaaSGate.register = doRegister;
+      window.SaaSGate.showRegister = function(){
+        var l=document.getElementById('gate-login'), r=document.getElementById('gate-register');
+        if(l) l.style.display='none'; if(r) r.style.display='block';
+        var t=document.getElementById('gf-title'), s=document.getElementById('gf-sub');
+        if(t) t.textContent='Prova gratis 14 giorni'; if(s) s.textContent='Crea il tuo account INGLY — nessuna carta richiesta';
+      };
+      window.SaaSGate.showLogin = function(){
+        var l=document.getElementById('gate-login'), r=document.getElementById('gate-register');
+        if(r) r.style.display='none'; if(l) l.style.display='block';
+        var t=document.getElementById('gf-title'), s=document.getElementById('gf-sub');
+        if(t) t.textContent='Bentornato'; if(s) s.textContent='Accedi alla tua licenza INGLY';
       };
 
       /* Patch logout */
