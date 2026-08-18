@@ -44548,7 +44548,9 @@ const IdeasModule = {
         <div style="display:flex;gap:8px">
           <input class="form-control" id="url-import-input" type="url"
             placeholder="https://www.etsy.com/listing/... oppure Amazon, Pinterest, Instagram"
-            style="flex:1;font-size:13px" onkeydown="if(event.key==='Enter')IdeasModule._fetchMeta()">
+            style="flex:1;font-size:13px" oninput="IdeasModule._autoFetch()"
+            onpaste="setTimeout(function(){IdeasModule._fetchMeta();},60)"
+            onkeydown="if(event.key==='Enter')IdeasModule._fetchMeta()">
           <button onclick="IdeasModule._fetchMeta()"
             style="padding:0 18px;background:linear-gradient(135deg,#fbbf24,#f59e0b);color:#1a1200;border:none;border-radius:9px;cursor:pointer;font-size:13px;font-weight:800;white-space:nowrap;flex-shrink:0">
             🔍 Carica
@@ -44576,61 +44578,75 @@ const IdeasModule = {
     setTimeout(()=>document.getElementById('url-import-input')?.focus(),80);
   },
 
+  // Auto-fetch al paste/typing (debounced): l'immagine si prende DA SOLA.
+  _autoFetch(){
+    clearTimeout(this._afTimer);
+    const url=document.getElementById('url-import-input')?.value?.trim()||'';
+    if(!/^https?:\/\/.+\..+/.test(url)) return;
+    this._afTimer=setTimeout(()=>{ this._fetchMeta(); }, 600);
+  },
+
+  // Scarica l'HTML della pagina provando più proxy CORS (fallback a cascata).
+  async _fetchHTML(url){
+    const builders=[
+      u=>({url:`https://api.allorigins.win/get?url=${encodeURIComponent(u)}`, json:true}),
+      u=>({url:`https://corsproxy.io/?url=${encodeURIComponent(u)}`, json:false}),
+      u=>({url:`https://api.codetabs.com/v1/proxy?quest=${encodeURIComponent(u)}`, json:false}),
+    ];
+    for(const mk of builders){
+      try{
+        const {url:pu,json}=mk(url);
+        const res=await fetch(pu,{signal:AbortSignal.timeout(9000)});
+        if(!res.ok) continue;
+        if(json){ const d=await res.json(); if(d&&d.contents&&d.contents.length>200) return d.contents; }
+        else { const t=await res.text(); if(t&&t.length>200) return t; }
+      }catch(e){ /* prova il proxy successivo */ }
+    }
+    return '';
+  },
+
   async _fetchMeta(){
     const url=document.getElementById('url-import-input')?.value?.trim();
-    if(!url){if(typeof toast!=='undefined')toast('Incolla un URL valido','warning');return;}
+    if(!url||!/^https?:\/\//.test(url)){if(typeof toast!=='undefined')toast('Incolla un URL valido','warning');return;}
     const msg=document.getElementById('url-import-msg');
     const prev=document.getElementById('url-import-preview');
-    if(msg){msg.style.display='block';msg.textContent='⏳ Recupero metadati...';}
+    if(msg){msg.style.display='block';msg.textContent='⏳ Recupero immagine e dati…';}
     if(prev) prev.style.display='none';
 
-    // Try multiple strategies to get Open Graph metadata
     let title='',desc='',image='';
-    try{
-      // Strategy 1: allorigins CORS proxy for og tags
-      const proxyUrl=`https://api.allorigins.win/get?url=${encodeURIComponent(url)}`;
-      const res=await fetch(proxyUrl,{signal:AbortSignal.timeout(8000)});
-      if(res.ok){
-        const data=await res.json();
-        const html=data.contents||'';
-        // Extract OG tags with regex
-        const og=(prop)=>{
-          const m=html.match(new RegExp(`<meta[^>]+(?:property|name)=["']og:${prop}["'][^>]+content=["']([^"']+)["']`,'i'))
-                 ||html.match(new RegExp(`<meta[^>]+content=["']([^"']+)["'][^>]+(?:property|name)=["']og:${prop}["']`,'i'));
-          return m?m[1].replace(/&amp;/g,'&').replace(/&quot;/g,'"').replace(/&#39;/g,"'"):'';
-        };
-        const titleTag=html.match(/<title[^>]*>([^<]+)<\/title>/i);
-        title=og('title')||(titleTag?titleTag[1].trim():'');
-        desc=og('description')||html.match(/<meta[^>]+name=["']description["'][^>]+content=["']([^"']+)["']/i)?.[1]||'';
-        image=og('image')||og('image:url')||'';
-        // Clean up
-        title=title.replace(/&amp;/g,'&').replace(/&#x27;/g,"'").trim().slice(0,100);
-        desc=desc.replace(/&amp;/g,'&').trim().slice(0,400);
-      }
-    }catch(e){}
-
-    // Fallback: use URL domain as title
-    if(!title){
-      try{ title=new URL(url).hostname.replace(/^www\./,''); }catch{}
+    const html=await this._fetchHTML(url);
+    if(html){
+      const dec=s=>String(s||'').replace(/&amp;/g,'&').replace(/&quot;/g,'"').replace(/&#0?39;|&#x27;/g,"'").replace(/&#x2F;|&#47;/g,'/');
+      const metaTag=(name)=>{
+        const m=html.match(new RegExp('<meta[^>]+(?:property|name)=["\']'+name+'["\'][^>]+content=["\']([^"\']+)["\']','i'))
+               ||html.match(new RegExp('<meta[^>]+content=["\']([^"\']+)["\'][^>]+(?:property|name)=["\']'+name+'["\']','i'));
+        return m?dec(m[1]):'';
+      };
+      const titleTag=html.match(/<title[^>]*>([^<]+)<\/title>/i);
+      title=metaTag('og:title')||(titleTag?dec(titleTag[1]).trim():'');
+      desc=metaTag('og:description')||metaTag('description')||'';
+      // immagine: og → twitter → link image_src → prima <img> grande
+      image=metaTag('og:image')||metaTag('og:image:secure_url')||metaTag('og:image:url')
+           ||metaTag('twitter:image')||metaTag('twitter:image:src')||'';
+      if(!image){ const li=html.match(/<link[^>]+rel=["']image_src["'][^>]+href=["']([^"']+)["']/i); if(li) image=dec(li[1]); }
+      if(image && image.startsWith('//')) image='https:'+image;
+      title=title.trim().slice(0,100); desc=desc.trim().slice(0,400);
     }
+    if(!title){ try{ title=new URL(url).hostname.replace(/^www\./,''); }catch(e){} }
 
-    // Store for later save
     window._urlImportData={url,title,desc,image};
 
-    // Show preview
-    if(msg) msg.style.display='none';
     if(prev) prev.style.display='block';
     const ti=document.getElementById('url-prev-title');
     const de=document.getElementById('url-prev-desc');
     const im=document.getElementById('url-prev-img');
     if(ti) ti.textContent=title||url;
-    if(de) de.textContent=desc||(image?'':'Nessuna descrizione trovata — potrai aggiungerla manualmente');
-    if(im&&image){im.src=image;im.style.display='block';}
-    else if(im) im.style.display='none';
+    if(de) de.textContent=desc||(image?'':'Nessuna descrizione trovata — potrai aggiungerla a mano');
+    if(im&&image){ im.src=image; im.style.display='block'; } else if(im){ im.style.display='none'; }
 
-    if(!title&&!image&&!desc && msg){
-      msg.style.display='block';
-      msg.innerHTML='<span style="color:var(--text-muted)">ℹ️ Non ho trovato metadati automatici. Salvo l\'idea con il link — potrai aggiungere titolo e immagine manualmente.</span>';
+    if(msg){
+      if(image){ msg.style.display='none'; }
+      else { msg.style.display='block'; msg.innerHTML='<span style="color:var(--text-muted)">ℹ️ Immagine non trovata (il sito potrebbe bloccarla). Puoi salvare comunque e aggiungerla a mano.</span>'; }
     }
   },
 
@@ -63621,8 +63637,8 @@ const QuickCapture = {
     // Delegate to IdeasModule if available
     if(typeof IdeasModule !== 'undefined') {
       document.getElementById('qc-modal')?.remove();
-      IdeasModule.importFromURL();
-      setTimeout(()=>{ const input=document.getElementById('url-import-input'); if(input){ input.value=url; IdeasModule._fetchURLMeta(); } }, 300);
+      IdeasModule.openFromUrl();
+      setTimeout(()=>{ const input=document.getElementById('url-import-input'); if(input){ input.value=url; IdeasModule._fetchMeta(); } }, 300);
     } else {
       await IDB.put('ideas', { id:Date.now(), title:url.replace(/^https?:\/\/(www\.)?/,'').slice(0,60), links:url, status:'idea', createdAt:new Date().toISOString() });
       document.getElementById('qc-modal')?.remove();
