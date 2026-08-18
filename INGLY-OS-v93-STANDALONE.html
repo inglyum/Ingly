@@ -44541,7 +44541,7 @@ const IdeasModule = {
       <div style="padding:16px 20px;border-bottom:1px solid var(--border);display:flex;align-items:center;gap:12px">
         <div style="width:38px;height:38px;background:rgba(109,81,247,.12);border-radius:10px;display:flex;align-items:center;justify-content:center;font-size:18px;flex-shrink:0">🔗</div>
         <div><div style="font-size:15px;font-weight:800">Importa Idea da URL</div>
-        <div style="font-size:11px;color:var(--text-muted)">Incolla il link — recupera automaticamente immagine, titolo e descrizione</div></div>
+        <div style="font-size:11px;color:var(--text-muted)">Incolla il link prodotto (o l'URL diretto dell'immagine). Etsy blocca i bot: usa tasto destro → "Copia indirizzo immagine".</div></div>
         <button onclick="document.getElementById('_ideas-overlay').remove()" style="background:none;border:none;cursor:pointer;color:var(--text-muted);font-size:20px;margin-left:auto">✕</button>
       </div>
       <div style="padding:20px;display:flex;flex-direction:column;gap:14px">
@@ -44618,6 +44618,16 @@ const IdeasModule = {
     const dec=s=>String(s||'').replace(/&amp;/g,'&').replace(/&quot;/g,'"').replace(/&#0?39;|&#x27;/g,"'").replace(/&#x2F;|&#47;/g,'/');
     let title='',desc='',image='';
 
+    // 0) URL immagine diretto (es. i.etsystatic.com/...jpg) → usalo senza scraping.
+    if(/\.(jpe?g|png|webp|gif|avif)(\?|#|$)/i.test(url) || /i\.etsystatic\.com|images-?[a-z]*\.(?:ssl-images-)?amazon|media-amazon|\.pinimg\.com|scontent|fbcdn/i.test(url)){
+      window._urlImportData={url, title:(function(){try{return new URL(url).hostname.replace(/^www\./,'');}catch(e){return 'Immagine';}})(), desc:'', image:url};
+      if(prev) prev.style.display='block';
+      if(ti) ti.textContent='Immagine prodotto';
+      if(de) de.textContent='Da URL immagine diretto';
+      if(im){ im.onerror=function(){ im.style.display='none'; if(msg){msg.style.display='block';msg.textContent='Immagine non caricabile da questo URL.';} }; im.onload=function(){ if(msg) msg.style.display='none'; }; im.src=url; im.style.display='block'; }
+      return;
+    }
+
     // 1) Microlink: risolve og:image lato server (gestisce l'anti-bot di Etsy & co.)
     try{
       const r=await fetch('https://api.microlink.io/?url='+encodeURIComponent(url),{signal:AbortSignal.timeout(12000)});
@@ -44672,7 +44682,7 @@ const IdeasModule = {
     if(im){
       let ci=0;
       im.onload=function(){ if(window._urlImportData) window._urlImportData.image=im.src; im.style.display='block'; if(msg) msg.style.display='none'; };
-      im.onerror=function(){ ci++; if(ci<candidates.length){ im.src=candidates[ci]; } else { im.style.display='none'; if(msg){ msg.style.display='block'; msg.innerHTML='<span style="color:var(--text-muted)">ℹ️ Immagine non recuperabile da questo sito. Salva e aggiungila a mano.</span>'; } } };
+      im.onerror=function(){ ci++; if(ci<candidates.length){ im.src=candidates[ci]; } else { im.style.display='none'; if(msg){ msg.style.display='block'; var etsy=/etsy\.com/i.test(url); msg.innerHTML= etsy ? '<span style="color:var(--text-muted)">🛡️ Etsy blocca il recupero automatico. Soluzione: sulla pagina Etsy <b>tasto destro sull\'immagine → "Copia indirizzo immagine"</b> e incolla quell\'URL qui.</span>' : '<span style="color:var(--text-muted)">ℹ️ Immagine non recuperabile da questo sito. Incolla l\'URL diretto dell\'immagine, oppure salva e aggiungila a mano.</span>'; } } };
       im.style.display='block'; im.src=candidates[0];
     }
   },
@@ -105628,8 +105638,10 @@ html, body{ overflow-x:hidden; max-width:100vw; }
   #sidebar-nav .nav-item.active, #sidebar-nav .nav-item[aria-current="page"]{
     background: color-mix(in srgb, var(--primary,#fbbf24) 14%, transparent);
     box-shadow: inset 3px 0 0 var(--primary,#fbbf24); }
-  /* voce nascosta dalla dedup: marcata per debug/reversibilità */
-  #sidebar-nav .nav-item[data-fav-dup="1"]{ display:none !important; }
+  /* Le voci nei Preferiti RESTANO nella loro categoria, con una stella. */
+  #sidebar-nav .nav-item[data-fav-dup="1"]{ display:flex !important; }
+  #sidebar-nav .nav-group-items .nav-item[data-fav-dup="1"]::after{
+    content:"★"; color:var(--primary,#fbbf24); font-size:10px; margin-left:auto; opacity:.85; flex-shrink:0; }
   `;
   var st=document.createElement('style'); st.id='v71-nav-tidy-css'; st.textContent=css;
   (document.head||document.documentElement).appendChild(st);
