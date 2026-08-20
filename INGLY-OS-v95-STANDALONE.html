@@ -40608,6 +40608,38 @@ const MorningBriefing = {
     const fmt = v => '€' + Math.round(v).toLocaleString('it-IT');
     const score = hsData.total;
 
+    // ── STATO NEUTRO: nessun dato reale nel tool → schermata pulita, niente
+    //    numeri inventati né urgenze/insight fittizi. L'utente importerà il backup. ──
+    const hasData = !!m && (
+      (m.revenue?.mtd || 0) > 0 ||
+      (m.ops?.ordersActive || 0) > 0 ||
+      (m.ops?.ordersTotal || 0) > 0 ||
+      (m.ops?.ordersOverdue || 0) > 0 ||
+      (m.clients?.total || 0) > 0 ||
+      (m.finance?.cashBalance || 0) > 0
+    );
+    if (!hasData) {
+      const neutral = `
+<div id="morning-briefing-overlay-2" style="position:fixed;inset:0;background:rgba(0,0,0,.88);z-index:99999;display:flex;align-items:center;justify-content:center;backdrop-filter:blur(6px)" onclick="if(event.target.id==='morning-briefing-overlay-2')MorningBriefing.close()">
+  <div style="background:var(--bg-card);border-radius:20px;border:1.5px solid var(--border2);width:560px;max-width:96vw;max-height:92vh;overflow-y:auto;box-shadow:0 32px 80px rgba(0,0,0,.8);position:relative">
+    <button onclick="MorningBriefing.close()" style="position:absolute;top:14px;right:14px;background:rgba(255,255,255,.1);border:none;border-radius:50%;width:30px;height:30px;color:#fff;cursor:pointer;font-size:14px;z-index:1">✕</button>
+    <div style="padding:34px 30px 26px;text-align:center">
+      <div style="width:64px;height:64px;border-radius:18px;background:var(--primary-dim);border:1px solid var(--primary-border);display:flex;align-items:center;justify-content:center;margin:0 auto 16px;font-size:30px">🧭</div>
+      <div style="color:var(--text-dim);font-size:11px;font-weight:700;text-transform:uppercase;letter-spacing:.1em">${dayName} ${now.toLocaleDateString('it-IT',{day:'numeric',month:'long'})} • ${greeting}</div>
+      <div style="color:var(--text);font-size:20px;font-weight:800;margin:6px 0 8px">Benvenuto in Ingly OS</div>
+      <div style="color:var(--text-muted);font-size:13px;line-height:1.6;max-width:420px;margin:0 auto">Nessun dato ancora presente. Importa il tuo backup per vedere KPI, urgenze e insight sincronizzati con la tua attività — oppure inizia a inserire i primi dati.</div>
+    </div>
+    <div style="display:flex;gap:10px;padding:0 30px 30px;justify-content:center;flex-wrap:wrap">
+      <button onclick="MorningBriefing.close();App.navigate('backup')" style="padding:11px 20px;background:var(--primary);color:#000;border:none;border-radius:10px;font-weight:800;cursor:pointer;font-size:13px">📦 Importa backup</button>
+      <button onclick="MorningBriefing.close();App.navigate('quoter')" style="padding:11px 18px;background:var(--bg-card2);color:var(--text);border:1px solid var(--border2);border-radius:10px;font-weight:700;cursor:pointer;font-size:13px">Crea primo preventivo</button>
+      <button onclick="MorningBriefing.close()" style="padding:11px 18px;background:transparent;color:var(--text-muted);border:1px solid var(--border);border-radius:10px;cursor:pointer;font-size:13px">Esplora il tool →</button>
+    </div>
+  </div>
+</div>`;
+      document.body.insertAdjacentHTML('beforeend', neutral);
+      return;
+    }
+
     const html = `
 <div id="morning-briefing-overlay-2" style="position:fixed;inset:0;background:rgba(0,0,0,.88);z-index:99999;display:flex;align-items:center;justify-content:center;backdrop-filter:blur(6px)" onclick="if(event.target.id==='morning-briefing-overlay-2')MorningBriefing.close()">
   <div style="background:var(--bg-card);border-radius:20px;border:1.5px solid var(--border2);width:700px;max-width:96vw;max-height:92vh;overflow-y:auto;box-shadow:0 32px 80px rgba(0,0,0,.8);position:relative">
@@ -107782,203 +107814,33 @@ body{ -webkit-font-smoothing:antialiased; -moz-osx-font-smoothing:grayscale; tex
 })();
 </script>
 
-<style id="v95-ui-refresh-css">
-/* ── RAPIDO premium (icone linea moderne, griglia pulita) ── */
-#core-nav{ padding:8px 8px 10px; border-bottom:1px solid var(--border); margin-bottom:4px; }
-#core-nav #cn-header{ display:flex; align-items:center; gap:6px; padding:2px 4px 8px; cursor:pointer; user-select:none; }
-#core-nav .cn-h-label{ font-size:10px; font-weight:800; color:var(--text-dim); text-transform:uppercase; letter-spacing:.8px; display:flex; align-items:center; gap:6px; }
-#core-nav .cn-h-spacer{ flex:1; }
-#core-nav .cn-h-btn{ width:22px; height:22px; display:flex; align-items:center; justify-content:center; border-radius:6px; color:var(--text-dim); cursor:pointer; transition:.15s; border:1px solid transparent; }
-#core-nav .cn-h-btn:hover{ color:var(--primary); border-color:var(--primary-border); background:var(--primary-dim); }
-#core-nav .cn-h-btn svg{ width:14px; height:14px; }
-#core-nav .cn-grid{ display:grid; grid-template-columns:repeat(3,1fr); gap:6px; }
-#core-nav .cn-body.cn-collapsed{ display:none; }
-#core-nav .cn-btn{ display:flex; flex-direction:column; align-items:center; gap:5px; padding:10px 4px 8px; border:1px solid var(--border); border-radius:11px; cursor:pointer; background:var(--bg-card2); transition:transform .14s cubic-bezier(.16,1,.3,1), border-color .14s, background .14s, box-shadow .14s; position:relative; }
-#core-nav .cn-btn svg{ width:20px; height:20px; stroke:currentColor; stroke-width:2; fill:none; stroke-linecap:round; stroke-linejoin:round; color:var(--text-muted); transition:.14s; }
-#core-nav .cn-btn span{ font-size:9.5px; font-weight:600; color:var(--text-dim); text-align:center; line-height:1.15; }
-@media (prefers-reduced-motion:no-preference){
-  #core-nav .cn-btn:hover{ transform:translateY(-2px); box-shadow:0 4px 14px rgba(0,0,0,.14); }
-}
-#core-nav .cn-btn:hover{ border-color:var(--primary-border); background:var(--primary-dim); }
-#core-nav .cn-btn:hover svg{ color:var(--primary); }
-#core-nav .cn-btn:hover span{ color:var(--primary); }
-#core-nav .cn-btn.active{ border-color:var(--primary); }
-#core-nav .cn-btn.active svg,#core-nav .cn-btn.active span{ color:var(--primary); }
-#core-nav .cn-btn .cn-rm{ position:absolute; top:-6px; right:-6px; width:18px; height:18px; border-radius:50%; background:var(--red); color:#fff; border:none; font-size:11px; line-height:1; cursor:pointer; display:none; align-items:center; justify-content:center; }
-#core-nav.cn-editing .cn-btn .cn-rm{ display:flex; }
-#core-nav.cn-editing .cn-btn{ animation:cnwob .4s ease infinite alternate; }
-@keyframes cnwob{ from{ transform:rotate(-.6deg); } to{ transform:rotate(.6deg); } }
-/* Picker "aggiungi scorciatoia" */
-#cn-picker{ position:fixed; inset:0; z-index:100000; background:#000a; display:none; align-items:center; justify-content:center; padding:16px; }
-#cn-picker.open{ display:flex; }
-#cn-picker .cnp-box{ background:var(--bg-card); border:1px solid var(--border2); border-radius:16px; width:min(460px,96vw); max-height:80vh; overflow:auto; box-shadow:0 30px 80px #000a; }
-#cn-picker .cnp-head{ display:flex; align-items:center; gap:10px; padding:16px 18px; border-bottom:1px solid var(--border); font-weight:800; font-size:15px; color:var(--text); }
-#cn-picker .cnp-x{ margin-left:auto; width:30px; height:30px; border-radius:50%; border:1px solid var(--border); background:var(--bg-card2); color:var(--text-muted); cursor:pointer; }
-#cn-picker .cnp-grid{ display:grid; grid-template-columns:1fr 1fr; gap:8px; padding:16px 18px; }
-#cn-picker .cnp-item{ display:flex; align-items:center; gap:10px; padding:10px 12px; border:1px solid var(--border); border-radius:10px; cursor:pointer; transition:.14s; color:var(--text); font-size:13px; font-weight:600; }
-#cn-picker .cnp-item:hover{ border-color:var(--primary-border); background:var(--primary-dim); }
-#cn-picker .cnp-item svg{ width:18px; height:18px; stroke:currentColor; stroke-width:2; fill:none; stroke-linecap:round; stroke-linejoin:round; color:var(--primary); flex-shrink:0; }
-#cn-picker .cnp-item.on{ opacity:.4; pointer-events:none; }
-/* Logo: affordance di modifica al passaggio */
+<style id="v95-logo-css">
+/* ── Cambio logo: affordance di modifica al passaggio (additivo) ── */
 #topbar .logo{ position:relative; }
-#topbar .logo .logo-edit{ position:absolute; left:0; top:0; width:38px; height:38px; border-radius:50%; background:#000a; color:#fff; border:none; cursor:pointer; display:none; align-items:center; justify-content:center; font-size:13px; }
+#topbar .logo .logo-edit{ position:absolute; left:0; top:0; width:38px; height:38px; border-radius:50%; background:#000a; color:#fff; border:none; cursor:pointer; display:none; align-items:center; justify-content:center; }
 #topbar .logo:hover .logo-edit{ display:flex; }
+#topbar .logo .logo-edit svg{ width:14px; height:14px; stroke:#fff; stroke-width:2; fill:none; stroke-linecap:round; stroke-linejoin:round; }
 </style>
 
-<script id="v95-ui-refresh">
+<script id="v95-logo">
 /* ═══════════════════════════════════════════════════════════════════════════
-   RAPIDO premium + icone linea moderne + cambio logo (additivo, reversibile)
-   - Sostituisce le emoji del pannello RAPIDO con un set di icone SVG "line"
-     coerente (stile Lucide), CSP-safe (inline, nessuna dipendenza).
-   - Il pannello è personalizzabile: riduci (rimuovi) o estendi (aggiungi)
-     le scorciatoie; la scelta è salvata in localStorage.
-   - Il logo si cambia in 1 click: carica un'immagine → salvata come dataURL.
+   Cambio logo in 1 click (additivo, reversibile, CSP-safe).
+   NB: il pannello "Accesso Rapido" resta quello originale del tool — non viene
+   toccato, per non rompere nulla.
    ═══════════════════════════════════════════════════════════════════════════ */
 (function(){
   "use strict";
-  if(window.__uiRefresh95) return; window.__uiRefresh95=true;
-
-  // ── Set icone SVG (path 24×24, stroke=currentColor) ──────────────────────
-  var IC={
-    dashboard:'<rect x="3" y="3" width="7" height="9" rx="1"/><rect x="14" y="3" width="7" height="5" rx="1"/><rect x="14" y="12" width="7" height="9" rx="1"/><rect x="3" y="16" width="7" height="5" rx="1"/>',
-    users:'<path d="M16 21v-2a4 4 0 0 0-4-4H6a4 4 0 0 0-4 4v2"/><circle cx="9" cy="7" r="4"/><path d="M22 21v-2a4 4 0 0 0-3-3.87"/><path d="M16 3.13a4 4 0 0 1 0 7.75"/>',
-    zap:'<polygon points="13 2 3 14 12 14 11 22 21 10 12 10 13 2"/>',
-    briefcase:'<rect x="2" y="7" width="20" height="14" rx="2"/><path d="M16 21V5a2 2 0 0 0-2-2h-4a2 2 0 0 0-2 2v16"/>',
-    clipboard:'<rect x="8" y="2" width="8" height="4" rx="1"/><path d="M16 4h2a2 2 0 0 1 2 2v14a2 2 0 0 1-2 2H6a2 2 0 0 1-2-2V6a2 2 0 0 1 2-2h2"/><path d="M12 11h4"/><path d="M12 16h4"/><path d="M8 11h.01"/><path d="M8 16h.01"/>',
-    package:'<path d="M21 16V8a2 2 0 0 0-1-1.73l-7-4a2 2 0 0 0-2 0l-7 4A2 2 0 0 0 3 8v8a2 2 0 0 0 1 1.73l7 4a2 2 0 0 0 2 0l7-4A2 2 0 0 0 21 16z"/><path d="M3.27 6.96 12 12.01l8.73-5.05"/><path d="M12 22.08V12"/>',
-    branch:'<line x1="6" y1="3" x2="6" y2="15"/><circle cx="18" cy="6" r="3"/><circle cx="6" cy="18" r="3"/><path d="M18 9a9 9 0 0 1-9 9"/>',
-    file:'<path d="M15 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V7z"/><path d="M14 2v4a2 2 0 0 0 2 2h4"/><path d="M16 13H8"/><path d="M16 17H8"/><path d="M10 9H8"/>',
-    bars:'<line x1="12" y1="20" x2="12" y2="10"/><line x1="18" y1="20" x2="18" y2="4"/><line x1="6" y1="20" x2="6" y2="16"/>',
-    cloud:'<path d="M17.5 19H9a7 7 0 1 1 6.71-9h1.79a4.5 4.5 0 1 1 0 9Z"/>',
-    palette:'<circle cx="13.5" cy="6.5" r=".7" fill="currentColor" stroke="none"/><circle cx="17.5" cy="10.5" r=".7" fill="currentColor" stroke="none"/><circle cx="8.5" cy="7.5" r=".7" fill="currentColor" stroke="none"/><circle cx="6.5" cy="12.5" r=".7" fill="currentColor" stroke="none"/><path d="M12 2C6.5 2 2 6.5 2 12s4.5 10 10 10c.93 0 1.65-.75 1.65-1.69 0-.44-.18-.83-.44-1.12-.29-.29-.44-.65-.44-1.13a1.64 1.64 0 0 1 1.67-1.67h2c3.05 0 5.55-2.5 5.55-5.55C21.97 6.01 17.46 2 12 2Z"/>',
-    settings:'<path d="M12.22 2h-.44a2 2 0 0 0-2 2v.18a2 2 0 0 1-1 1.73l-.43.25a2 2 0 0 1-2 0l-.15-.08a2 2 0 0 0-2.73.73l-.22.38a2 2 0 0 0 .73 2.73l.15.1a2 2 0 0 1 1 1.72v.51a2 2 0 0 1-1 1.74l-.15.09a2 2 0 0 0-.73 2.73l.22.38a2 2 0 0 0 2.73.73l.15-.08a2 2 0 0 1 2 0l.43.25a2 2 0 0 1 1 1.73V20a2 2 0 0 0 2 2h.44a2 2 0 0 0 2-2v-.18a2 2 0 0 1 1-1.73l.43-.25a2 2 0 0 1 2 0l.15.08a2 2 0 0 0 2.73-.73l.22-.39a2 2 0 0 0-.73-2.73l-.15-.08a2 2 0 0 1-1-1.74v-.5a2 2 0 0 1 1-1.74l.15-.09a2 2 0 0 0 .73-2.73l-.22-.38a2 2 0 0 0-2.73-.73l-.15.08a2 2 0 0 1-2 0l-.43-.25a2 2 0 0 1-1-1.73V4a2 2 0 0 0-2-2Z"/><circle cx="12" cy="12" r="3"/>',
-    calendar:'<rect x="3" y="4" width="18" height="18" rx="2"/><line x1="16" y1="2" x2="16" y2="6"/><line x1="8" y1="2" x2="8" y2="6"/><line x1="3" y1="10" x2="21" y2="10"/>',
-    megaphone:'<path d="m3 11 18-5v12L3 14v-3z"/><path d="M11.6 16.8a3 3 0 1 1-5.8-1.6"/>',
-    trending:'<polyline points="22 7 13.5 15.5 8.5 10.5 2 17"/><polyline points="16 7 22 7 22 13"/>',
-    flask:'<path d="M9 3h6"/><path d="M10 3v6.5L4.6 18a2 2 0 0 0 1.7 3h11.4a2 2 0 0 0 1.7-3L14 9.5V3"/><path d="M7.5 14h9"/>',
-    wallet:'<path d="M19 7V5a2 2 0 0 0-2-2H5a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-2"/><path d="M21 12H16a2 2 0 0 0 0 4h5v-4z"/>',
-    truck:'<path d="M14 18V6a1 1 0 0 0-1-1H2v13"/><path d="M14 9h4l3 3v6h-7"/><circle cx="6.5" cy="18" r="2"/><circle cx="17.5" cy="18" r="2"/>',
-    sparkles:'<path d="M12 3l1.9 5.1L19 10l-5.1 1.9L12 17l-1.9-5.1L5 10l5.1-1.9L12 3z"/><path d="M19 3v4"/><path d="M21 5h-4"/>',
-    store:'<path d="M2 7l1-4h18l1 4"/><path d="M4 7v13a1 1 0 0 0 1 1h14a1 1 0 0 0 1-1V7"/><path d="M2 7a3 3 0 0 0 5 0 3 3 0 0 0 5 0 3 3 0 0 0 5 0 3 3 0 0 0 5 0"/>',
-    target:'<circle cx="12" cy="12" r="9"/><circle cx="12" cy="12" r="5"/><circle cx="12" cy="12" r="1" fill="currentColor" stroke="none"/>',
-    plus:'<line x1="12" y1="5" x2="12" y2="19"/><line x1="5" y1="12" x2="19" y2="12"/>',
-    pencil:'<path d="M12 20h9"/><path d="M16.5 3.5a2.12 2.12 0 0 1 3 3L7 19l-4 1 1-4 12.5-12.5z"/>'
-  };
-  function svg(name){ return '<svg viewBox="0 0 24 24" aria-hidden="true">'+(IC[name]||IC.dashboard)+'</svg>'; }
-
-  // ── Catalogo scorciatoie disponibili (id univoco → azione sicura) ────────
-  function nav(s){ return function(){ try{ App.navigate(s); }catch(e){} }; }
-  function call(fn){ return function(){ try{ fn(); }catch(e){} }; }
-  var CATALOG=[
-    {id:'dashboard', label:'Dashboard', icon:'dashboard', run:nav('dashboard')},
-    {id:'crm',       label:'CRM',       icon:'users',     run:nav('clienti')},
-    {id:'quoter',    label:'Quoter',    icon:'zap',       run:call(function(){ if(window.QuoteGeneratorV2) QuoteGeneratorV2.open(); else App.navigate('quoter'); })},
-    {id:'b2b',       label:'B2B',       icon:'briefcase', run:nav('laser_b2b')},
-    {id:'ordini',    label:'Ordini',    icon:'clipboard', run:nav('order_tracker')},
-    {id:'magazzino', label:'Magazzino', icon:'package',   run:nav('magazzino')},
-    {id:'pipeline',  label:'Pipeline',  icon:'branch',    run:nav('crm_pipeline')},
-    {id:'fatture',   label:'Fatture',   icon:'file',      run:nav('xmlsdi')},
-    {id:'stats',     label:'Stats',     icon:'bars',      run:call(function(){ if(window.SalesStats) SalesStats.render(); else App.navigate('analytics'); })},
-    {id:'cloud',     label:'Cloud',     icon:'cloud',     run:nav('cloud_updater')},
-    {id:'brand',     label:'Brand',     icon:'palette',   run:call(function(){ if(window.BrandConfig) BrandConfig.openSettings(); else App.navigate('brand_identity'); })},
-    {id:'settings',  label:'Settings',  icon:'settings',  run:call(function(){ if(window.IVAConfig) IVAConfig.openSettings(); else App.navigate('settings'); })},
-    // Estensioni opzionali (aggiungibili dall'utente)
-    {id:'calendar',  label:'Calendario',icon:'calendar',  run:nav('calendar')},
-    {id:'marketing', label:'Marketing', icon:'megaphone', run:nav('marketing')},
-    {id:'opportunity',label:'Opportunity',icon:'trending',run:nav('opportunity')},
-    {id:'lab',       label:'Lab AI',    icon:'flask',     run:nav('lab_setup')},
-    {id:'finance',   label:'Finance',   icon:'wallet',    run:nav('finance')},
-    {id:'supply',    label:'Fornitori', icon:'truck',     run:nav('supply_chain')},
-    {id:'ai',        label:'AI',        icon:'sparkles',  run:nav('ai')},
-    {id:'catalog',   label:'Catalogo',  icon:'store',     run:nav('catalog')}
-  ];
-  function byId(id){ for(var i=0;i<CATALOG.length;i++) if(CATALOG[i].id===id) return CATALOG[i]; return null; }
-  var CKEY='ingly_rapido_ids_v1';
-  var DEFAULT_IDS=['dashboard','crm','quoter','b2b','ordini','magazzino','pipeline','fatture','stats','cloud','brand','settings'];
-  function getIds(){ try{ var s=JSON.parse(localStorage.getItem(CKEY)); if(Array.isArray(s)&&s.length) return s.filter(byId); }catch(e){} return DEFAULT_IDS.slice(); }
-  function setIds(a){ try{ localStorage.setItem(CKEY, JSON.stringify(a)); }catch(e){} }
-
-  var COLL='ingly_rapido_collapsed_v1';
-
-  function render(){
-    var host=document.getElementById('core-nav');
-    if(!host) return;
-    host.__mine=true;
-    var ids=getIds();
-    var collapsed=localStorage.getItem(COLL)==='1';
-    host.className=host.classList.contains('cn-editing')?'cn-editing':'';
-    var html=''
-      +'<div id="cn-header">'
-        +'<span class="cn-h-label">'+svg('zap')+'RAPIDO</span>'
-        +'<span class="cn-h-spacer"></span>'
-        +'<span class="cn-h-btn" id="cn-add" title="Aggiungi scorciatoia">'+svg('plus')+'</span>'
-        +'<span class="cn-h-btn" id="cn-edit" title="Modifica pannello">'+svg('pencil')+'</span>'
-        +'<span class="cn-h-btn" id="cn-toggle" title="Riduci / espandi">'+(collapsed?'▸':'▾')+'</span>'
-      +'</div>'
-      +'<div class="cn-body'+(collapsed?' cn-collapsed':'')+'"><div class="cn-grid">'
-      +ids.map(function(id){ var it=byId(id); if(!it) return '';
-          return '<div class="cn-btn" data-id="'+id+'" title="'+it.label+'">'
-            +'<button class="cn-rm" data-rm="'+id+'" title="Rimuovi">✕</button>'
-            +svg(it.icon)+'<span>'+it.label+'</span></div>';
-        }).join('')
-      +'</div></div>';
-    host.innerHTML=html;
-
-    // Header: toggle collassa
-    var hdr=host.querySelector('#cn-header');
-    host.querySelector('#cn-toggle').onclick=function(e){ e.stopPropagation();
-      var c=localStorage.getItem(COLL)==='1'; if(c) localStorage.removeItem(COLL); else localStorage.setItem(COLL,'1'); render();
-    };
-    host.querySelector('#cn-edit').onclick=function(e){ e.stopPropagation(); host.classList.toggle('cn-editing'); };
-    host.querySelector('#cn-add').onclick=function(e){ e.stopPropagation(); openPicker(); };
-
-    // Bottoni
-    host.querySelectorAll('.cn-btn').forEach(function(btn){
-      var id=btn.getAttribute('data-id'); var it=byId(id);
-      btn.addEventListener('click',function(ev){
-        if(host.classList.contains('cn-editing')) return;
-        if(ev.target.closest('.cn-rm')) return;
-        host.querySelectorAll('.cn-btn').forEach(function(x){ x.classList.remove('active'); });
-        btn.classList.add('active');
-        if(it&&it.run) it.run();
-      });
-    });
-    host.querySelectorAll('.cn-rm').forEach(function(rm){
-      rm.addEventListener('click',function(ev){ ev.stopPropagation();
-        var id=rm.getAttribute('data-rm'); var a=getIds().filter(function(x){ return x!==id; }); setIds(a); render(); host.classList.add('cn-editing');
-      });
-    });
-  }
-
-  function openPicker(){
-    var cur=getIds();
-    var box=document.getElementById('cn-picker');
-    if(!box){ box=document.createElement('div'); box.id='cn-picker'; document.body.appendChild(box); }
-    box.innerHTML='<div class="cnp-box"><div class="cnp-head">'+svg('plus')+'Aggiungi scorciatoia'
-      +'<button class="cnp-x" onclick="document.getElementById(\'cn-picker\').classList.remove(\'open\')">✕</button></div>'
-      +'<div class="cnp-grid">'
-      +CATALOG.map(function(it){ var on=cur.indexOf(it.id)>-1;
-          return '<div class="cnp-item'+(on?' on':'')+'" data-add="'+it.id+'">'+svg(it.icon)+it.label+(on?' ✓':'')+'</div>';
-        }).join('')
-      +'</div></div>';
-    box.classList.add('open');
-    box.querySelectorAll('[data-add]').forEach(function(el){
-      el.addEventListener('click',function(){ var id=el.getAttribute('data-add'); var a=getIds(); if(a.indexOf(id)<0){ a.push(id); setIds(a); } render(); openPicker(); });
-    });
-    box.addEventListener('click',function(e){ if(e.target===box) box.classList.remove('open'); });
-  }
-
-  // ── Cambio logo ──────────────────────────────────────────────────────────
+  if(window.__logoEdit95) return; window.__logoEdit95=true;
+  var PENCIL='<svg viewBox="0 0 24 24" aria-hidden="true"><path d="M12 20h9"/><path d="M16.5 3.5a2.12 2.12 0 0 1 3 3L7 19l-4 1 1-4 12.5-12.5z"/></svg>';
   var LKEY='ingly_custom_logo_v1';
   function applyLogo(){
     try{ var d=localStorage.getItem(LKEY); if(!d) return;
       var img=document.querySelector('#topbar .logo img'); if(img) img.src=d;
     }catch(e){}
   }
-  function mountLogoEditor(){
+  function mount(){
     var logo=document.querySelector('#topbar .logo'); if(!logo||logo.__le) return; logo.__le=true;
-    var b=document.createElement('button'); b.className='logo-edit'; b.title='Cambia logo'; b.innerHTML=svg('pencil');
-    b.querySelector('svg').style.width='14px'; b.querySelector('svg').style.height='14px'; b.querySelector('svg').style.stroke='#fff';
+    var b=document.createElement('button'); b.className='logo-edit'; b.title='Cambia logo'; b.innerHTML=PENCIL;
     b.onclick=function(e){ e.stopPropagation();
       var inp=document.createElement('input'); inp.type='file'; inp.accept='image/*';
       inp.onchange=function(){ var f=inp.files&&inp.files[0]; if(!f) return;
@@ -107990,16 +107852,8 @@ body{ -webkit-font-smoothing:antialiased; -moz-osx-font-smoothing:grayscale; tex
     };
     logo.appendChild(b);
   }
-
-  // ── Boot: attende che #core-nav e la topbar esistano, poi prende il controllo
   var tries=0;
-  var iv=setInterval(function(){
-    tries++;
-    var host=document.getElementById('core-nav');
-    if(host && !host.__mine) render();
-    applyLogo(); mountLogoEditor();
-    if(tries>30) clearInterval(iv);
-  },500);
+  var iv=setInterval(function(){ tries++; applyLogo(); mount(); if(tries>30) clearInterval(iv); },500);
 })();
 </script>
 
