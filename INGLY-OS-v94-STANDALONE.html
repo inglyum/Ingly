@@ -88389,8 +88389,8 @@ body             #content-inner { padding-bottom: 76px; }
 .nav-item i { color: inherit !important; opacity: .7; width: 15px !important; font-size: 12px !important; }
 .nav-item.active i { opacity: 1 !important; }
 
-/* Hide ugly legacy elements */
-#core-nav { display: none !important; }
+/* Accesso Rapido: reso visibile (era nascosto per errore come "legacy") */
+#core-nav { display: block !important; }
 #prox-nav-group .prox-nav-label { display: none !important; }
 #prox-nav-group {
   background: rgba(251,191,36,.04) !important;
@@ -107814,46 +107814,124 @@ body{ -webkit-font-smoothing:antialiased; -moz-osx-font-smoothing:grayscale; tex
 })();
 </script>
 
-<style id="v95-logo-css">
-/* ── Cambio logo: affordance di modifica al passaggio (additivo) ── */
+<style id="v96-brand-css">
+/* ── White-label branding: logo + nome + colore (additivo, reversibile) ── */
 #topbar .logo{ position:relative; }
-#topbar .logo .logo-edit{ position:absolute; left:0; top:0; width:38px; height:38px; border-radius:50%; background:#000a; color:#fff; border:none; cursor:pointer; display:none; align-items:center; justify-content:center; }
+#topbar .logo .logo-edit{ position:absolute; left:0; top:0; width:38px; height:38px; border-radius:50%; background:#000a; color:#fff; border:none; cursor:pointer; display:none; align-items:center; justify-content:center; z-index:2; }
 #topbar .logo:hover .logo-edit{ display:flex; }
 #topbar .logo .logo-edit svg{ width:14px; height:14px; stroke:#fff; stroke-width:2; fill:none; stroke-linecap:round; stroke-linejoin:round; }
+#brand-modal{ position:fixed; inset:0; z-index:100001; background:#000a; display:none; align-items:center; justify-content:center; padding:16px; }
+#brand-modal.open{ display:flex; }
+#brand-modal .bm-box{ background:var(--bg-card); border:1px solid var(--border2); border-radius:16px; width:min(440px,96vw); max-height:88vh; overflow:auto; box-shadow:0 30px 80px #000a; }
+#brand-modal .bm-head{ display:flex; align-items:center; gap:10px; padding:16px 18px; border-bottom:1px solid var(--border); font-weight:800; font-size:15px; color:var(--text); }
+#brand-modal .bm-x{ margin-left:auto; width:30px; height:30px; border-radius:50%; border:1px solid var(--border); background:var(--bg-card2); color:var(--text-muted); cursor:pointer; }
+#brand-modal .bm-body{ padding:16px 18px; display:flex; flex-direction:column; gap:16px; }
+#brand-modal .bm-lbl{ font-size:11px; font-weight:700; text-transform:uppercase; letter-spacing:.5px; color:var(--text-dim); margin-bottom:8px; }
+#brand-modal .bm-logo-row{ display:flex; align-items:center; gap:12px; }
+#brand-modal .bm-logo-prev{ width:48px; height:48px; border-radius:12px; object-fit:contain; border:1px solid var(--border2); background:var(--bg-card2); }
+#brand-modal .bm-btn{ padding:8px 14px; border-radius:9px; border:1px solid var(--border2); background:var(--bg-card2); color:var(--text); font-weight:700; font-size:12px; cursor:pointer; }
+#brand-modal .bm-btn.primary{ background:var(--primary); color:#000; border-color:var(--primary); }
+#brand-modal input.bm-name{ width:100%; background:var(--bg-card2); border:1px solid var(--border2); border-radius:9px; padding:9px 12px; color:var(--text); font-size:13px; outline:none; }
+#brand-modal .bm-sw{ display:flex; flex-wrap:wrap; gap:8px; }
+#brand-modal .bm-sw button{ width:30px; height:30px; border-radius:50%; border:2px solid transparent; cursor:pointer; }
+#brand-modal .bm-sw button.on{ border-color:var(--text); box-shadow:0 0 0 2px var(--bg-card); }
+#brand-modal .bm-foot{ display:flex; gap:10px; padding:14px 18px; border-top:1px solid var(--border); }
 </style>
 
-<script id="v95-logo">
+<script id="v96-brand">
 /* ═══════════════════════════════════════════════════════════════════════════
-   Cambio logo in 1 click (additivo, reversibile, CSP-safe).
-   NB: il pannello "Accesso Rapido" resta quello originale del tool — non viene
-   toccato, per non rompere nulla.
+   WHITE-LABEL BRANDING (additivo, reversibile, CSP-safe) — v96
+   Cambia logo, nome attività e colore primario dal topbar. Salvato in
+   localStorage (ingly_brand_v1) e riapplicato all'avvio. Il colore primario è
+   impostato inline su :root (--primary/-dim/-border), così tiene su ogni tema.
+   NB: NON tocca l'Accesso Rapido né i moduli.
    ═══════════════════════════════════════════════════════════════════════════ */
 (function(){
   "use strict";
-  if(window.__logoEdit95) return; window.__logoEdit95=true;
+  if(window.__brand96) return; window.__brand96=true;
   var PENCIL='<svg viewBox="0 0 24 24" aria-hidden="true"><path d="M12 20h9"/><path d="M16.5 3.5a2.12 2.12 0 0 1 3 3L7 19l-4 1 1-4 12.5-12.5z"/></svg>';
-  var LKEY='ingly_custom_logo_v1';
-  function applyLogo(){
-    try{ var d=localStorage.getItem(LKEY); if(!d) return;
-      var img=document.querySelector('#topbar .logo img'); if(img) img.src=d;
-    }catch(e){}
+  var KEY='ingly_brand_v1';
+  var SWATCHES=['#fbbf24','#6366f1','#22c55e','#ef4444','#a855f7','#0ea5e9','#f97316','#ec4899'];
+  function get(){ try{ return JSON.parse(localStorage.getItem(KEY))||{}; }catch(e){ return {}; } }
+  function set(b){ try{ localStorage.setItem(KEY, JSON.stringify(b)); }catch(e){} }
+  function hexToRgba(hex,a){ var h=hex.replace('#',''); if(h.length===3) h=h[0]+h[0]+h[1]+h[1]+h[2]+h[2];
+    var n=parseInt(h,16); return 'rgba('+((n>>16)&255)+','+((n>>8)&255)+','+(n&255)+','+a+')'; }
+  function applyColor(c){ if(!c) return; var r=document.documentElement.style;
+    r.setProperty('--primary', c);
+    r.setProperty('--primary-dim', hexToRgba(c,.14));
+    r.setProperty('--primary-border', hexToRgba(c,.30));
   }
-  function mount(){
-    var logo=document.querySelector('#topbar .logo'); if(!logo||logo.__le) return; logo.__le=true;
-    var b=document.createElement('button'); b.className='logo-edit'; b.title='Cambia logo'; b.innerHTML=PENCIL;
-    b.onclick=function(e){ e.stopPropagation();
+  function apply(){
+    var b=get();
+    try{ if(b.logo){ var img=document.querySelector('#topbar .logo img'); if(img) img.src=b.logo; } }catch(e){}
+    try{ if(b.name){ var nm=document.getElementById('topbar-biz-name'); if(nm) nm.textContent=b.name; } }catch(e){}
+    if(b.color) applyColor(b.color);
+  }
+  function openModal(){
+    var b=get();
+    var m=document.getElementById('brand-modal');
+    if(!m){ m=document.createElement('div'); m.id='brand-modal'; document.body.appendChild(m); }
+    var curLogo=b.logo||(document.querySelector('#topbar .logo img')||{}).src||'';
+    var curName=b.name||(document.getElementById('topbar-biz-name')||{}).textContent||'Ingly Design';
+    var curColor=b.color||getComputedStyle(document.documentElement).getPropertyValue('--primary').trim()||'#fbbf24';
+    m.innerHTML='<div class="bm-box">'
+      +'<div class="bm-head">'+PENCIL.replace("viewBox","style=\"width:18px;height:18px;stroke:var(--primary);stroke-width:2;fill:none\" viewBox")+' Personalizza brand'
+      +'<button class="bm-x" onclick="document.getElementById(\'brand-modal\').classList.remove(\'open\')">✕</button></div>'
+      +'<div class="bm-body">'
+        +'<div><div class="bm-lbl">Logo</div><div class="bm-logo-row">'
+          +'<img class="bm-logo-prev" id="bm-logo-prev" src="'+curLogo+'" alt="logo">'
+          +'<button class="bm-btn" id="bm-logo-btn">Carica immagine…</button></div></div>'
+        +'<div><div class="bm-lbl">Nome attività</div><input class="bm-name" id="bm-name" value="'+String(curName).replace(/"/g,'&quot;')+'" placeholder="Nome del tuo brand"></div>'
+        +'<div><div class="bm-lbl">Colore primario</div><div class="bm-sw" id="bm-sw">'
+          +SWATCHES.map(function(c){ return '<button data-c="'+c+'" style="background:'+c+'" class="'+(c.toLowerCase()===curColor.toLowerCase()?'on':'')+'"></button>'; }).join('')
+          +'<input type="color" id="bm-color" value="'+(/^#([0-9a-f]{6})$/i.test(curColor)?curColor:'#fbbf24')+'" style="width:30px;height:30px;border:none;background:none;cursor:pointer;padding:0">'
+        +'</div></div>'
+      +'</div>'
+      +'<div class="bm-foot"><button class="bm-btn" id="bm-reset">Ripristina default</button>'
+        +'<button class="bm-btn primary" id="bm-save" style="margin-left:auto">Salva brand</button></div>'
+      +'</div>';
+    m.classList.add('open');
+    var draft={ logo:b.logo||null, name:curName, color:curColor };
+    m.querySelector('#bm-logo-btn').onclick=function(){
       var inp=document.createElement('input'); inp.type='file'; inp.accept='image/*';
       inp.onchange=function(){ var f=inp.files&&inp.files[0]; if(!f) return;
         if(f.size>1500000){ if(window.toast) toast('Immagine troppo grande (max ~1.5MB)','warning'); return; }
-        var r=new FileReader(); r.onload=function(){ try{ localStorage.setItem(LKEY, r.result); applyLogo(); if(window.toast) toast('✅ Logo aggiornato','success'); }catch(err){ if(window.toast) toast('Spazio insufficiente','error'); } };
-        r.readAsDataURL(f);
+        var rd=new FileReader(); rd.onload=function(){ draft.logo=rd.result; var p=document.getElementById('bm-logo-prev'); if(p) p.src=rd.result; };
+        rd.readAsDataURL(f);
       };
       inp.click();
     };
-    logo.appendChild(b);
+    m.querySelectorAll('#bm-sw button[data-c]').forEach(function(btn){
+      btn.onclick=function(){ draft.color=btn.getAttribute('data-c');
+        m.querySelectorAll('#bm-sw button[data-c]').forEach(function(x){ x.classList.remove('on'); }); btn.classList.add('on');
+        applyColor(draft.color);
+      };
+    });
+    var cp=m.querySelector('#bm-color'); if(cp) cp.oninput=function(){ draft.color=cp.value; applyColor(draft.color);
+      m.querySelectorAll('#bm-sw button[data-c]').forEach(function(x){ x.classList.remove('on'); }); };
+    m.querySelector('#bm-save').onclick=function(){
+      draft.name=(document.getElementById('bm-name')||{}).value||draft.name;
+      set({ logo:draft.logo, name:draft.name, color:draft.color });
+      apply();
+      m.classList.remove('open');
+      if(window.toast) toast('✅ Brand aggiornato','success');
+    };
+    m.querySelector('#bm-reset').onclick=function(){
+      try{ localStorage.removeItem(KEY); }catch(e){}
+      var r=document.documentElement.style; r.removeProperty('--primary'); r.removeProperty('--primary-dim'); r.removeProperty('--primary-border');
+      m.classList.remove('open');
+      if(window.toast) toast('Brand ripristinato — ricarica per il logo/nome originali','info');
+    };
+    m.addEventListener('click',function(e){ if(e.target===m) m.classList.remove('open'); });
+  }
+  function mount(){
+    var logo=document.querySelector('#topbar .logo'); if(!logo||logo.__be) return; logo.__be=true;
+    var btn=document.createElement('button'); btn.className='logo-edit'; btn.title='Personalizza brand (logo, nome, colore)'; btn.innerHTML=PENCIL;
+    btn.onclick=function(e){ e.stopPropagation(); openModal(); };
+    logo.appendChild(btn);
   }
   var tries=0;
-  var iv=setInterval(function(){ tries++; applyLogo(); mount(); if(tries>30) clearInterval(iv); },500);
+  var iv=setInterval(function(){ tries++; apply(); mount(); if(tries>30) clearInterval(iv); },500);
 })();
 </script>
 
