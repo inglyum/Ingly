@@ -32,18 +32,68 @@ export function roleForTenant(ctx, tenantId) {
   return (ctx.roles && ctx.roles[tenantId]) || null;
 }
 
-// Carica dati di contorno via RLS (profilo, ruoli seed) — richiede client reale.
+// Permessi CRM lato UI derivati dal ruolo (il confine reale è la RLS).
+export const ROLE_ACTIONS = {
+  OWNER:      ['read', 'create', 'update', 'delete', 'export'],
+  ADMIN:      ['read', 'create', 'update', 'delete', 'export'],
+  MANAGER:    ['read', 'create', 'update', 'delete', 'export'],
+  SALES:      ['read', 'create', 'update', 'export'],
+  DESIGNER:   ['read'],
+  PRODUCTION: ['read'],
+  WAREHOUSE:  ['read'],
+  FINANCE:    ['read'],
+  VIEWER:     ['read'],
+};
+export function permissionsForRole(role) { return (ROLE_ACTIONS[role] || []).slice(); }
+export function can(ctx, action) {
+  const role = ctx && roleForTenant(ctx, ctx.activeTenant);
+  return permissionsForRole(role).includes(action);
+}
+
+// Risolve il contesto: PRIMA dai claim JWT; se assenti, FALLBACK dal DB via RLS
+// (tenant_membership per i tenant, user_role→role per il ruolo). Additivo: se i
+// claim ci sono, il DB non viene interrogato per tenant/role.
 export async function loadContext(supabase, session) {
   const ctx = claimsFromSession(session);
-  if (!supabase) return ctx;
+  ctx.source = ctx.tenantIds.length ? 'claim' : 'none';
+  if (!supabase || !ctx.userId) return ctx;
+
+  // profilo (self)
   try {
     const { data: profile } = await supabase.from('profile').select('*').eq('id', ctx.userId).maybeSingle();
     ctx.profile = profile || null;
   } catch (_) { ctx.profile = null; }
+
+  // FALLBACK tenant: se il claim non porta tenant, leggi la PROPRIA membership.
+  if (!ctx.tenantIds.length) {
+    try {
+      const { data: mems } = await supabase.from('tenant_membership')
+        .select('tenant_id,status').eq('user_id', ctx.userId).eq('status', 'active');
+      if (mems && mems.length) {
+        ctx.tenantIds = mems.map((m) => m.tenant_id);
+        ctx.activeTenant = ctx.activeTenant || ctx.tenantIds[0];
+        ctx.source = 'db';
+      }
+    } catch (_) { /* RLS potrebbe bloccare: vedi report Fase 12 */ }
+  }
+
+  // FALLBACK ruolo: se il claim non porta ruoli, leggi user_role→role.
+  if (!ctx.roles || !Object.keys(ctx.roles).length) {
+    ctx.roles = {};
+    try {
+      const { data: urs } = await supabase.from('user_role')
+        .select('tenant_id, role:role_id(key)').eq('user_id', ctx.userId);
+      (urs || []).forEach((u) => { ctx.roles[u.tenant_id] = (u.role && u.role.key) || u.role_key || null; });
+    } catch (_) { /* RLS/seed */ }
+  }
+
+  // catalogo ruoli (lookup globale)
   try {
-    // authenticated può leggere i ruoli seed (lookup globale)
-    const { data: roles } = await supabase.from('role').select('key,name,level').order('level');
+    const { data: roles } = await supabase.from('role').select('key,name,level').order('level', { ascending: true });
     ctx.roleCatalog = roles || [];
   } catch (_) { ctx.roleCatalog = []; }
+
+  ctx.activeRole = roleForTenant(ctx, ctx.activeTenant);
+  ctx.permissions = permissionsForRole(ctx.activeRole);
   return ctx;
 }
