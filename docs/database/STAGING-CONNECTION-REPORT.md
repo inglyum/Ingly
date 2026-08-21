@@ -68,3 +68,23 @@ Per procedere in sicurezza servono, in un ambiente con rete verso Supabase:
 # STAGING CONNECTION STATUS: BLOCKED
 CLI assente + progetto di staging non verificabile. Nessuna operazione eseguita.
 In attesa: CLI installata + project ref staging + credenziali come secret.
+
+---
+
+## Aggiornamento Fase 4.4 — tentativo di link staging
+- CLI: 2.115.0 ✓ · nessun link preesistente (nessun tocco a produzione).
+- Staging ref fornito: `uepyexyosyogyvzorata` (≠ produzione `dhfuokioyuytbxxgoilp`).
+- Comando eseguito: `npx supabase link --project-ref uepyexyosyogyvzorata`.
+- **Esito: FALLITO — `LegacyPlatformAuthRequiredError`** (access token assente).
+  `SUPABASE_ACCESS_TOKEN` non presente in env; `supabase login` è interattivo
+  (browser) → non eseguibile in questa sessione. Egress verso Supabase comunque
+  non in allowlist qui.
+- **Link NON avvenuto** (nessun `supabase/.temp/project-ref`). Nessun dry-run,
+  nessuna migrazione, produzione e V96 intatte.
+
+### Per completare il link (serve uno di questi)
+1. `SUPABASE_ACCESS_TOKEN` come **secret/env locale** (Personal Access Token da
+   supabase.com → Account → Access Tokens), **mai** in repo/chat, **in un ambiente
+   con rete verso Supabase**. Poi `npx supabase link --project-ref uepyexyosyogyvzorata`.
+2. In alternativa eseguire link + `db push --dry-run` da una **macchina/CI** con
+   accesso a Supabase (i file migrazione sono già pronti nel repo).
