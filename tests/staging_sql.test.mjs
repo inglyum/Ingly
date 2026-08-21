@@ -7,29 +7,39 @@ import { describe, it, assert } from './harness.mjs';
 import { readFileSync, existsSync, readdirSync } from 'node:fs';
 import { join } from 'node:path';
 
-const DIR = join(process.cwd(), 'supabase', 'migrations', 'staging');
+const MIG = join(process.cwd(), 'supabase', 'migrations');       // up migrations (CLI discovery)
+const ROLL = join(process.cwd(), 'supabase', 'rollback');        // rollback artifacts (NON discovery)
 const PROD_REF = 'dhfuokioyuytbxxgoilp';
 const STAGING_REF = 'uepyexyosyogyvzorata';
-const read = (f) => readFileSync(join(DIR, f), 'utf8');
-const up = read('0001_foundation_slice.sql');
-const down = read('0001_foundation_slice_down.sql');
-const seed = read('0002_rbac_seed.sql');
+const UP_FOUNDATION = '20260101000001_foundation_slice.sql';
+const UP_RBAC = '20260101000002_rbac_seed.sql';
+const DOWN_FOUNDATION = '20260101000001_foundation_slice_down.sql';
+const up = readFileSync(join(MIG, UP_FOUNDATION), 'utf8');
+const seed = readFileSync(join(MIG, UP_RBAC), 'utf8');
+const down = readFileSync(join(ROLL, DOWN_FOUNDATION), 'utf8');
 
 const PUBLIC_TABLES = ['tenant','profile','tenant_membership','role','permission','role_permission','user_role'];
 
 describe('Staging SQL — validazione statica', (s) => {
-  it(s, 'i file di migrazione foundation esistono', async () => {
-    ['0001_foundation_slice.sql','0001_foundation_slice_down.sql','0002_rbac_seed.sql']
-      .forEach((f) => assert(existsSync(join(DIR, f)), `manca ${f}`));
+  it(s, 'le up-migration foundation sono nella root migrations (CLI discovery)', async () => {
+    assert(existsSync(join(MIG, UP_FOUNDATION)), `manca ${UP_FOUNDATION} in migrations/`);
+    assert(existsSync(join(MIG, UP_RBAC)), `manca ${UP_RBAC} in migrations/`);
   });
 
-  it(s, 'ordering migrazioni: prefissi numerici crescenti, 0001 prima di 0002', async () => {
-    const sqls = readdirSync(DIR).filter((f) => /^\d+.*\.sql$/.test(f) && !/_down\./.test(f)).sort();
-    assert(sqls[0].startsWith('0001'), `prima migrazione inattesa: ${sqls[0]}`);
-    assert(sqls.includes('0002_rbac_seed.sql'), '0002 non presente nell\'ordine');
-    // numeri unici e ordinati
-    const nums = sqls.map((f) => parseInt(f.slice(0,4),10));
-    for (let i=1;i<nums.length;i++) assert(nums[i] >= nums[i-1], 'ordering non monotono');
+  it(s, 'la down-migration è un ARTEFATTO di rollback, NON in migrations/ (non deve essere una up)', async () => {
+    assert(existsSync(join(ROLL, DOWN_FOUNDATION)), `manca il rollback ${DOWN_FOUNDATION}`);
+    const inMig = readdirSync(MIG).some((f) => /_down\./i.test(f));
+    assert(!inMig, 'una down-migration è finita in supabase/migrations/ (verrebbe applicata come up!)');
+  });
+
+  it(s, 'ordering: foundation < rbac < stripe (nomi timestamp Supabase, lessicografico)', async () => {
+    const sqls = readdirSync(MIG).filter((f) => /^\d{8,}.*\.sql$/.test(f)).sort();
+    const iF = sqls.indexOf(UP_FOUNDATION);
+    const iR = sqls.indexOf(UP_RBAC);
+    const iS = sqls.indexOf('20260817_stripe.sql');
+    assert(iF >= 0 && iR >= 0, 'foundation/rbac non trovati nella root');
+    assert(iF < iR, 'foundation deve precedere rbac');
+    if (iS >= 0) assert(iR < iS, 'foundation/rbac devono precedere la migrazione stripe legacy');
   });
 
   it(s, 'ogni tabella public della foundation crea la tabella', async () => {

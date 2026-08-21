@@ -246,5 +246,5 @@ revoke all on integ.integration_credential from anon, authenticated;
 
 -- ==========================================================================
 -- FINE SLICE — NON ESEGUITO IN QUESTA SESSIONE (staging non disponibile).
--- Rollback: supabase/migrations/staging/0001_foundation_slice_down.sql
+-- Rollback: supabase/rollback/20260101000001_foundation_slice_down.sql
 -- ==========================================================================

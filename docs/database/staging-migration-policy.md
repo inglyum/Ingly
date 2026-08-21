@@ -16,7 +16,8 @@
 
 ## 2. Struttura repo
 ```
-supabase/migrations/staging/   ← SQL versionato (NON eseguito qui)
+supabase/migrations/            ← up-migration (discovery CLI): 20260101000001_foundation_slice.sql, 20260101000002_rbac_seed.sql
+supabase/rollback/              ← artefatti di rollback (NON discovery): *_down.sql
 supabase/tests/                ← test RLS/concorrenza/eventi (NON eseguiti qui)
 ```
 I file di `staging/` sono **scaffolding da revisionare**: non vengono applicati
