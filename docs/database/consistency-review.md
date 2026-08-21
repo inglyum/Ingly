@@ -44,3 +44,18 @@ restano come contesto/motivazione, non come specifica attiva.
 ## Conclusione
 Nessuna contraddizione residua tra i documenti dopo le correzioni. I nove HR sono
 recepiti in modo coerente e mutuamente referenziato.
+
+---
+
+## Addendum Fase 4 — foundation SQL vs documenti
+| Tema | SQL (0001/0002) | Documenti | Esito |
+|--|--|--|--|
+| RLS su tutte le public | enable + policy su 7 tabelle | rls §10 | ✔ |
+| claim via auth.jwt() | current_tenant_ids() | rls §9.1/§10, authentication §8 | ✔ |
+| role_perm_cache | creata in 0002 | rls §9.1/§10 | ✔ (non più reference irrisolta) |
+| audit immutabile | revoke update/delete | rls §10, database-v2 §6 | ✔ |
+| credential protetta | RLS+revoke | rls §10 | ✔ |
+| aggregate_version>0 | CHECK | database-v2 §9.5 | ✔ |
+| FK auth.users | profile/membership/user_role | (scelta confermata) | ✔ |
+| indici foundation | 8 indici | indexing §7 | ✔ |
+| rollback | 0001_..._down.sql | staging-migration-policy §5 | ✔ |

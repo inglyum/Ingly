@@ -139,3 +139,13 @@ addendum dei documenti di design (database-v2 §9, rls §9, indexing §7, offlin
 schema-map §5, v96-mapping §7, ERD §5). Vedi `consistency-review.md` per la prova di
 coerenza e `DATABASE-REVIEW.md` (FINAL VALIDATION) per lo stato per singolo HR.
 **Stato: READY FOR IMPLEMENTATION (in staging)**, subordinato alla suite di test.
+
+---
+
+## 6. Stato post Fase 4 (foundation SQL corretto)
+Recepite tutte le correzioni della review V1 nello scaffolding SQL (non eseguito):
+RLS su tutte le tabelle public (B-1), `auth.jwt()` (W-1), `role_perm_cache` in
+0002 (W-2/W-3 doc ref), integration_credential protetta (W-3), CHECK
+aggregate_version>0 (W-4/W-6), audit immutabile (W-5), FK verso auth.users (W-6/W-8),
+indici foundation (W-7/W-9), down migration (W-8/W-10), schema `security` spostato
+in 0002 (W-11). Dettaglio in `STAGING-FOUNDATION-SQL-REVIEW-V2.md`.

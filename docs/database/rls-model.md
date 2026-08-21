@@ -117,3 +117,17 @@ immutabilità garantita a livello di privilegi, non solo di policy.
 - Ogni `mv_*` ha colonna `tenant_id`; accesso via viste con RLS o funzioni
   `SECURITY INVOKER` che filtrano `current_tenant_ids()`. Vietati aggregati globali
   leggibili dal client.
+
+---
+
+## 10. Addendum Fase 4 — foundation SQL (allineamento)
+- **RLS su TUTTE le tabelle `public`** della foundation: `tenant`, `profile`
+  (self), `tenant_membership` (self/tenant), `role`/`permission`/`role_permission`
+  (lettura globale `authenticated`, scrittura solo service-role), `user_role`
+  (per tenant). Nessun accesso `anon`.
+- `current_tenant_ids()` usa **`auth.jwt()`** (non `current_setting`).
+- **`integ.integration_credential`**: RLS ON + `revoke all from anon,authenticated`
+  → accesso solo service-role/Edge.
+- **`audit.audit_log`**: `revoke update,delete from anon,authenticated` → immutabile.
+- **`security.role_perm_cache`** (creata in `0002_rbac_seed.sql`): mappa
+  ruolo→permessi materializzata usata da `has_permission()` senza costi/ricorsione.
