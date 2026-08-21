@@ -109,7 +109,7 @@ export async function boot(root) {
     } catch (_) { /* non autenticato */ }
   }
   root.innerHTML = renderApp({ config, session, ctx });
-  if (pickScreen({ config, session }) === 'shell') { mountRouter(root, ctx || {}); }
+  if (pickScreen({ config, session }) === 'shell') { mountRouter(root, ctx || {}, supabase); }
   wire(root, { supabase });
 }
 

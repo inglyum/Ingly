@@ -33,23 +33,10 @@ function viewDashboard(ctx) {
     <div class="v2-note">I valori si popoleranno da Supabase (staging) quando il modulo Vendite/Preventivi V2 sarà connesso.</div>`;
 }
 
-// ── CRM CLIENTI ──────────────────────────────────────────────────────────
+// ── CRM CLIENTI (live: montato dal router via crm-ui.js) ───────────────────
 function viewClients() {
-  return `${head({ icon: '👥', n: 'CRM Clienti' }, 'Clienti · contatti · pipeline')}
-    ${tabs('crm', [['lista', 'Lista'], ['pipeline', 'Pipeline'], ['attivita', 'Attività']], 'lista')}
-    <div class="v2-toolbar">
-      <input class="v2-search" data-search="clients" placeholder="🔍 Cerca cliente per nome/email…">
-      <select class="v2-filter"><option>Tutti i segmenti</option><option>B2C</option><option>B2B</option></select>
-      ${nyc('+ Nuovo cliente')}
-    </div>
-    <div class="v2-tabpane" data-pane="lista">
-      <div class="v2-table-wrap"><table class="v2-table"><thead><tr>
-        <th>Nome</th><th>Email</th><th>Telefono</th><th>Segmento</th><th>Valore</th><th></th></tr></thead>
-        <tbody data-rows="clients"><tr><td colspan="6">${empty('Nessun cliente — collega il backend staging (RLS per tenant).')}</td></tr></tbody>
-      </table></div>
-    </div>
-    <div class="v2-tabpane" data-pane="pipeline" hidden>${empty('Pipeline opportunità — modulo in arrivo (backend richiesto).')}</div>
-    <div class="v2-tabpane" data-pane="attivita" hidden>${empty('Attività/follow-up — modulo in arrivo (backend richiesto).')}</div>`;
+  return `${head({ icon: '👥', n: 'CRM Clienti' }, 'Clienti · contatti · attività · connesso a Supabase')}
+    <div data-crm-root><div data-crm-pane><div class="v2-loading">⏳ Inizializzazione CRM…</div></div></div>`;
 }
 
 // ── CATALOGO ─────────────────────────────────────────────────────────────

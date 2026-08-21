@@ -67,3 +67,23 @@ body{ background:var(--bg); color:var(--tx); font:14px/1.5 system-ui,-apple-syst
 .v2-kcol-h{ display:flex; justify-content:space-between; font-weight:700; font-size:12px; margin-bottom:8px }
 .v2-kcount{ background:var(--card); border-radius:99px; padding:0 7px; color:var(--mut) }
 @media (max-width:900px){ .v2-cols,.v2-kanban{ grid-template-columns:1fr } }
+
+/* ── CRM live (Fase 11) ── */
+.v2-loading{ padding:22px; text-align:center; color:var(--mut) }
+.v2-errbox{ padding:14px; border:1px solid #7f1d1d; background:#2a0f0f; color:#fca5a5; border-radius:10px }
+.v2-row{ cursor:pointer } .v2-row:hover td{ background:var(--card2) }
+.v2-num{ text-align:right; font-variant-numeric:tabular-nums }
+.v2-chip{ font-size:10px; background:rgba(251,191,36,.14); color:var(--pri); padding:1px 7px; border-radius:99px }
+.v2-ghost{ background:var(--card2); color:var(--tx); border:1px solid var(--bd) }
+.v2-sm{ padding:5px 10px; font-size:12px }
+.v2-detail-head{ display:flex; justify-content:space-between; margin-bottom:8px }
+.v2-kv{ display:grid; grid-template-columns:repeat(auto-fit,minmax(140px,1fr)); gap:10px; margin:12px 0 }
+.v2-kv > div{ background:var(--card); border:1px solid var(--bd); border-radius:10px; padding:10px }
+.v2-kv span{ display:block; font-size:10px; color:var(--mut); text-transform:uppercase; letter-spacing:.4px; margin-bottom:3px }
+.v2-notes{ color:var(--mut); font-size:13px }
+.v2-list{ margin:0; padding-left:18px; font-size:13px } .v2-list li{ margin:3px 0 }
+.v2-form{ max-width:560px } .v2-form label{ display:block; margin:10px 0 4px; font-size:12px; color:var(--mut) }
+.v2-form input,.v2-form select,.v2-form textarea{ width:100%; padding:9px 11px; border-radius:9px; border:1px solid var(--bd); background:var(--card2); color:var(--tx); font:inherit }
+.v2-form-row{ display:grid; grid-template-columns:1fr 1fr; gap:10px }
+.v2-form-actions{ display:flex; gap:8px; justify-content:flex-end; margin-top:14px }
+.v2-form-msg{ margin-top:8px; font-size:12px; color:var(--mut) }
