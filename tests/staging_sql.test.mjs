@@ -130,3 +130,64 @@ describe('Staging SQL — validazione statica', (s) => {
     assert(dollars % 2 === 0, 'delimitatori $$ non bilanciati');
   });
 });
+
+// ── CRM slice (Fase 10) ────────────────────────────────────────────────────
+const CRM_UP = '20260101000003_crm.sql';
+const CRM_DOWN = '20260101000003_crm_down.sql';
+const crm = readFileSync(join(MIG, CRM_UP), 'utf8');
+const crmDown = readFileSync(join(ROLL, CRM_DOWN), 'utf8');
+const CRM_TABLES = ['crm_company', 'crm_customer', 'crm_contact', 'crm_activity'];
+
+describe('CRM slice — validazione statica', (s) => {
+  it(s, 'la migrazione e il down CRM esistono nelle cartelle corrette', async () => {
+    assert(existsSync(join(MIG, CRM_UP)), 'manca migrazione CRM in migrations/');
+    assert(existsSync(join(ROLL, CRM_DOWN)), 'manca il down CRM in rollback/');
+    assert(!readdirSync(MIG).includes(CRM_DOWN), 'down CRM non deve stare in migrations/');
+  });
+  it(s, 'ordering: CRM (000003) dopo foundation/rbac', async () => {
+    assert('20260101000003' > '20260101000002', 'ordering CRM errato');
+  });
+  it(s, 'crea le 4 tabelle CRM previste dal design', async () => {
+    CRM_TABLES.forEach((t) => assert(new RegExp(`create table if not exists public\\.${t}\\b`, 'i').test(crm), `manca ${t}`));
+  });
+  it(s, 'ogni tabella CRM ha tenant_id NOT NULL + FK a tenant', async () => {
+    CRM_TABLES.forEach(() => {});
+    const fk = (crm.match(/tenant_id uuid not null references public\.tenant\(id\)/gi) || []).length;
+    assert(fk >= 4, `attese >=4 FK tenant, trovate ${fk}`);
+  });
+  it(s, 'relazioni FK: customer→company, contact→customer, activity→customer', async () => {
+    assert(/company_id uuid references public\.crm_company\(id\)/i.test(crm), 'FK customer->company mancante');
+    assert(/customer_id uuid not null references public\.crm_customer\(id\)/i.test(crm), 'FK contact->customer mancante');
+    assert(/customer_id uuid references public\.crm_customer\(id\)/i.test(crm), 'FK activity->customer mancante');
+  });
+  it(s, 'RLS abilitata su TUTTE le tabelle CRM', async () => {
+    CRM_TABLES.forEach((t) => assert(new RegExp(`alter table public\\.${t}\\s+enable row level security`, 'i').test(crm), `RLS off su ${t}`));
+  });
+  it(s, 'policy select+insert per ogni tabella CRM (per tenant/claim)', async () => {
+    CRM_TABLES.forEach((t) => {
+      assert(new RegExp(`create policy [\\w]+ on public\\.${t} for select`, 'i').test(crm), `no SELECT policy ${t}`);
+      assert(new RegExp(`create policy [\\w]+ on public\\.${t} for insert`, 'i').test(crm), `no INSERT policy ${t}`);
+    });
+    assert(/current_tenant_ids\(\)/.test(crm), 'policy non usano il claim tenant');
+  });
+  it(s, 'soft-delete: revoke delete ai client; activity immutabile (revoke update)', async () => {
+    assert(/revoke delete on[\s\S]*crm_customer[\s\S]*from anon, authenticated/i.test(crm), 'delete non revocato');
+    assert(/revoke update on public\.crm_activity from anon, authenticated/i.test(crm), 'activity non immutabile');
+  });
+  it(s, 'indici di ricerca trigram su customer(name,email) e company(name)', async () => {
+    ['ix_crm_customer_name_trgm', 'ix_crm_customer_email_trgm', 'ix_crm_company_name_trgm']
+      .forEach((ix) => assert(crm.includes(ix), `manca indice ${ix}`));
+    assert(/using gin \([a-z_]+ gin_trgm_ops\)/i.test(crm), 'trigram gin non usato');
+    assert(/create extension if not exists pg_trgm/i.test(crm), 'pg_trgm non abilitata');
+  });
+  it(s, 'type check constraints (B2C/B2B, tipi attività)', async () => {
+    assert(/check \(type in \('B2C','B2B'\)\)/i.test(crm), 'check tipo cliente mancante');
+    assert(/check \(type in \('note','call','email','meeting','followup'\)\)/i.test(crm), 'check tipo attività mancante');
+  });
+  it(s, 'down CRM droppa tutte le tabelle CRM', async () => {
+    CRM_TABLES.forEach((t) => assert(new RegExp(`drop table if exists public\\.${t}\\b`, 'i').test(crmDown), `down non droppa ${t}`));
+  });
+  it(s, 'nessun ref di PRODUZIONE nella slice CRM', async () => {
+    assert(!crm.includes(PROD_REF) && !crmDown.includes(PROD_REF), 'ref di produzione nella slice CRM');
+  });
+});
