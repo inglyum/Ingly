@@ -130,3 +130,12 @@ Il DB è pronto quando:
 # DATABASE REVIEW STATUS: REQUIRES CHANGES
 Recepite queste decisioni, lo stato passerà a READY FOR IMPLEMENTATION (in staging).
 Nessun SQL, nessuna migrazione, nessuna modifica a v96 in questa fase.
+
+---
+
+## 5. Stato post Fase 3.6
+Tutte le decisioni DB-1…DB-12 e le risoluzioni HR-1…HR-9 sono **recepite** negli
+addendum dei documenti di design (database-v2 §9, rls §9, indexing §7, offline-sync §10,
+schema-map §5, v96-mapping §7, ERD §5). Vedi `consistency-review.md` per la prova di
+coerenza e `DATABASE-REVIEW.md` (FINAL VALIDATION) per lo stato per singolo HR.
+**Stato: READY FOR IMPLEMENTATION (in staging)**, subordinato alla suite di test.

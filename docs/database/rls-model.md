@@ -84,3 +84,36 @@ immutabilità garantita a livello di privilegi, non solo di policy.
 ## 8. Test RLS (fase implementativa, non ora)
 - Suite che verifica: nessun accesso cross-tenant; ruoli rispettati; override
   owner; impossibilità di cambiare `tenant_id`; immutabilità audit/movimenti.
+
+---
+
+## 9. Addendum Fase 3.6 — RLS via claim, Storage, MV (VINCOLANTE)
+
+### 9.1 RLS via JWT claim (HR-3)
+- Il JWT dell'utente porta `app_metadata.tenant_ids uuid[]` e
+  `app_metadata.roles jsonb` (`{tenant_id: role_key}`), rigenerati al cambio
+  membership (hook/Edge su login e su update membership).
+- `current_tenant_ids()` legge dal claim (`auth.jwt()`), **non** da subquery su
+  `tenant_membership` → nessun costo per riga, nessuna ricorsione.
+- `has_permission(tenant, resource, action)` risolve dal claim + mappa
+  ruolo→permessi **materializzata** (tabella cache `security.role_perm_cache`
+  indicizzata, o set statico nel claim). Nessuna funzione costosa per-riga.
+- **SECURITY DEFINER**: tutte le helper con `SET search_path = ''`, oggetti
+  schema-qualified, `REVOKE EXECUTE FROM public`, `GRANT` mirati. Input validati.
+- **Anti-ricorsione**: `tenant_membership`/`user_role` hanno policy **semplici**
+  (self-membership) che non richiamano `has_permission`.
+
+### 9.2 Storage tenant isolation (HR-8)
+- Bucket **privati** (`designs`, `assets`, `exports`). Convenzione path:
+  `{{tenant_id}}/{{design_id}}/{{version}}/file.ext`.
+- **Storage policy**: `SELECT/INSERT/UPDATE/DELETE` consentiti solo se
+  `(storage.foldername(name))[1]::uuid = ANY(current_tenant_ids())`.
+- Download solo via **signed URL** a scadenza breve generati da Edge dopo check
+  ruolo. Update/delete: solo ruoli con permesso su `dsn_*`/`prj_*`; le **versioni**
+  pubblicate non si sovrascrivono (nuovo path per nuova versione) → isolamento e
+  immutabilità coerenti con HR-4.
+
+### 9.3 Analytics tenant-safe (HR-9)
+- Ogni `mv_*` ha colonna `tenant_id`; accesso via viste con RLS o funzioni
+  `SECURITY INVOKER` che filtrano `current_tenant_ids()`. Vietati aggregati globali
+  leggibili dal client.

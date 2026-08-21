@@ -95,3 +95,16 @@ erDiagram
   anche dove non disegnata per non appesantire).
 - Tabelle immutabili (movimenti, eventi, pagamenti, audit) non hanno relazioni di
   "update/delete": sono append-only.
+
+---
+
+## 5. Addendum Fase 3.6 (coerenza correzioni)
+- `MAC_MACHINE_UTILIZATION` **non è OLTP**: rimossa dal modello relazionale; l'utilizzo
+  è `analytics.mv_machine_utilization` (derivata, per-tenant). Restano `MAC_MACHINE_JOB`
+  e `MAC_MACHINE_DOWNTIME` come autorevoli.
+- `PROD_WORK_ORDER }o--|| DSN_DESIGN_VERSION` (FK alla **versione**, immutabile dopo
+  IN_PROGRESS), **non** a `DSN_DESIGN`.
+- `DOMAIN_EVENT` ha `aggregate_version` (UNIQUE per `aggregate_type,aggregate_id`).
+- `AUTOMATION_CONDITION` non è più tabella: `conditions JSONB` in `AUTOMATION`.
+- `QC_REWORK`/`QC_SCRAP` fusi in `QC_NON_CONFORMANCE` (`type`).
+- Aggiunta `SYNC_MUTATION_LOG` (idempotenza sync offline).

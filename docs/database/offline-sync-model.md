@@ -76,3 +76,26 @@ Ogni tabella "sincronizzabile" espone:
 ## 9. Cosa NON è incluso ora
 Nessuna implementazione, nessuna tabella creata: è il **modello**. L'ordine di
 adozione è definito in `migration-strategy.md` (Fasi C read-sync, D write-sync).
+
+---
+
+## 10. Addendum Fase 3.6 — sicurezza sync per dominio (HR-6, VINCOLANTE)
+
+La mutazione offline **non è sempre un dato autorevole**: per i domini critici è una
+**richiesta (command)** che il server valida/applica in transazione.
+
+| Dominio | Modalità offline | Conflict policy | Sicuro? |
+|--|--|--|--|
+| settings/brand | dato locale | client-wins | ✔ |
+| designs/projects (bozze non in produzione) | dato locale | client-wins | ✔ |
+| customers | dato + merge | merge campo-a-campo; dedup su email in staging | ✔ con merge |
+| quotes | richiesta | server autoritativo dopo invio; versione | ✔ |
+| **orders** | **command** | **server-wins**; mai client-wins | ✔ obbligatorio |
+| **inventory (movements/reservations)** | **command append-only** | nessun overwrite: il server riapplica con ricontrollo `available` (HR-1) | ✔ obbligatorio |
+| **production (work order state)** | **command** | server-wins; transizioni stato validate | ✔ obbligatorio |
+| **finance (invoice/payment)** | **command** | solo server; mai offline-authoritative | ✔ obbligatorio |
+
+**Regola vincolante**: per **inventory, orders, production, finance** il client
+accoda **comandi** con `client_mutation_id`+`idempotency_key`; il server li applica
+in TX (con lock stock dove serve), emette il domain event (outbox) e ritorna lo
+stato autorevole. Conflitto non risolvibile → stato `conflict` mostrato all'utente.

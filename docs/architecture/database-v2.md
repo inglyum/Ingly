@@ -215,5 +215,89 @@ sensibili minimizzati; audit immutabile; operazioni privilegiate solo in Edge
 Functions con service role a scope ridotto.
 
 ---
-**Totale tabelle proposte:** ~95 (business in `public` + interne in schemi
-dedicati). Nessuna creata: è **design**.
+
+## 9. Addendum Fase 3.6 — correzioni recepite (VINCOLANTI)
+
+> Questa sezione **supera** il testo precedente dove diverge. Riflette tutte le
+> decisioni DB-1…DB-12 e le risoluzioni HR-1…HR-9 (vedi `database-decisions.md`).
+
+### 9.1 Inventario (HR-1, HR-2)
+- **Stock autorevole = `inv_movement`** (append-only). Tipi movimento estesi:
+  `receipt, consume, production_output, return, scrap, adjust`.
+- **`inv_balance`** è **solo cache derivata**: aggiornata da **un unico trigger** su
+  `inv_movement` + **job di riconciliazione** periodico (`reconcile_inventory()`)
+  che ricalcola da movimenti, confronta e allerta sui delta. Processo di **rebuild**:
+  `TRUNCATE`+ricalcolo da `inv_movement` in staging, poi swap.
+- **Prenotazioni transazionali (HR-1)**: la reservation avviene **solo** via funzione
+  server `reserve_material(material_id, qty, ref)` in **transazione** con
+  `SELECT … FOR UPDATE` sul saldo materiale (o `pg_advisory_xact_lock(hashtext(material_id))`),
+  ricalcolo `available = on_hand − reserved + incoming` e insert **solo se sufficiente**;
+  altrimenti errore `INSUFFICIENT_STOCK`. **Idempotenza** via `idempotency_key` sulla
+  reservation. **Mai** locking/decisione lato client.
+
+### 9.2 Snapshot finanziari storici (APPROVED WITH CHANGES §5)
+- `sales_quote_item` e `sales_order_item` e `fin_invoice_item` congelano **come
+  colonne**: `unit_price numeric`, `discount numeric`, `vat_rate numeric`,
+  `cost numeric`, `line_total numeric`. `cost_breakdown JSONB` resta solo come
+  dettaglio informativo. Cambi a `cat_price_rule`/`cat_price_list` **non** toccano
+  documenti storici (i documenti copiano, non referenziano il prezzo live).
+
+### 9.3 Valuta e periodo (finance §8)
+- Documenti e pagamenti: `currency char(3) DEFAULT 'EUR'` e (multi-valuta futura)
+  `fx_rate numeric`. `fin_invoice.issue_date`/`due_date`, `fin_payment.received_at`
+  definiscono la competenza; report mensili aggregano su `issue_date` (ricavi) e
+  `received_at` (cassa). Chiarito: **ERP operativo, non contabilità certificata.**
+
+### 9.4 Produzione ↔ design immutabile (HR-4)
+- `prod_work_order.design_version_id` → **FK a `dsn_design_version`** (versione
+  esatta), **mai** a `dsn_design`. Trigger `wo_design_lock` vieta la modifica di
+  `design_version_id` quando `status >= IN_PROGRESS`. `dsn_design_version` è
+  **immutabile** (nessun UPDATE ai layer/oggetti di una versione pubblicata; una
+  modifica = nuova versione). `dsn_design.current_version_id` è solo puntatore UI.
+- `prod_work_order_material` acquisisce `work_order_operation_id uuid NULL` per costo
+  per operazione (APPROVED WITH CHANGES §6).
+
+### 9.5 Eventi: ordering e outbox (HR-5)
+- `events.domain_event` acquisisce **`aggregate_version bigint NOT NULL`**
+  (progressivo per `(aggregate_type, aggregate_id)`), con
+  UNIQUE `(tenant_id, aggregate_type, aggregate_id, aggregate_version)`.
+- Dispatch **ordinato per aggregato** secondo `aggregate_version`; evento scritto
+  nella **stessa transazione** dell'operazione (outbox). Replay = rilettura
+  append-only con consumer idempotenti; poison → `events.dlq`.
+
+### 9.6 Machine utilization → analytics (HR-7)
+- **Rimossa** `mac_machine_utilization` come tabella OLTP. Restano autorevoli
+  `mac_machine_job` e `mac_machine_downtime`. L'utilizzo è **derivato** in
+  `analytics.mv_machine_utilization` (per-tenant), refresh schedulato.
+
+### 9.7 Qualità (APPROVED WITH CHANGES §1)
+- `qc_rework` e `qc_scrap` **fusi** in `qc_non_conformance` con
+  `type non_conformance_type` (`defect|rework|scrap`) + `qty`, `cost`. Tabelle
+  separate rinviate finché non serve dettaglio dedicato. (`qc_quality_check` resta.)
+
+### 9.8 Automazione (APPROVED WITH CHANGES §5)
+- `automation.condition` diventa **`conditions JSONB`** dentro `automation`
+  (regole non relazionali). Restano relazionali `trigger`, `action`, `execution`,
+  `execution_log`, `job_queue` (fatti di business/tracciabilità).
+
+### 9.9 RLS via claim JWT (HR-3) — sintesi (dettaglio in `rls-model.md`)
+- Tenant e ruoli nel **JWT claim**; policy leggono il claim (nessuna funzione
+  costosa per riga). Helper `SECURITY DEFINER` con `SET search_path=''`. Nessuna
+  policy ricorsiva. Isolamento tenant preservato.
+
+### 9.10 Storage per-tenant (HR-8) — sintesi (dettaglio in `rls-model.md`)
+- Bucket privati; path `tenant_id/design_id/version/…`; Storage policy basata su
+  membership; **URL firmati** a scadenza; nessun bucket pubblico per asset cliente.
+
+### 9.11 Analytics tenant-safe (HR-9)
+- Tutte le `mv_*`/`analytics.*` includono `tenant_id` e sono filtrate (RLS o
+  funzioni per-tenant). **Nessun** aggregato globale cross-tenant.
+
+### 9.12 Indici (APPROVED WITH CHANGES §13)
+- Vedi `indexing-strategy.md` §7: aggiunti indici mancanti, rimossi `tenant_id`
+  singoli ridondanti coperti da compositi.
+
+---
+**Totale tabelle proposte (post-review):** ~92 (−1 `machine_utilization` OLTP,
+−1 `qc_rework`, −1 `qc_scrap`, −1 `automation.condition`; +1 `sync.mutation_log`).
+Nessuna creata: è **design**.

@@ -96,3 +96,17 @@ tenant_membership *─1 role ; role *─* permission (role_permission)
 - **Merge**: dati cliente sparsi → `crm_customer` (+ `crm_company` per B2B).
 - **Nuove**: work order/operazioni, qualità, eventi, automazioni, audit, AI —
   non esistono come entità in v96.
+
+---
+
+## 5. Addendum Fase 3.6 (VINCOLANTE)
+- **`mac_machine_utilization` rimossa da OLTP** → `analytics.mv_machine_utilization`
+  (per-tenant). Autorevoli restano `mac_machine_job` + `mac_machine_downtime`.
+- **`qc_rework`/`qc_scrap` fusi** in `qc_non_conformance` (`type` defect|rework|scrap).
+- **`automation.condition`** → `conditions JSONB` in `automation`.
+- **`sync.mutation_log`** (schema `sync`) aggiunto per idempotenza sync.
+- **`events.domain_event`** con `aggregate_version` (UNIQUE per aggregato).
+- Colonne snapshot su `sales_quote_item`/`sales_order_item`/`fin_invoice_item`.
+- `currency`(+`fx_rate`) su documenti/pagamenti finance.
+- `prod_work_order.design_version_id` → FK a `dsn_design_version` (immutabile post IN_PROGRESS);
+  `prod_work_order_material.work_order_operation_id` opzionale.

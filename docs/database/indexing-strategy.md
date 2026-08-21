@@ -66,3 +66,29 @@ quando cresceranno: `inv_movement`, `events.domain_event`, `audit.audit_log`,
 - Analytics pesanti su path transazionali (usare MV).
 - JSONB non indicizzato usato per filtri frequenti (se serve, GIN mirato su
   chiavi specifiche, o normalizzare).
+
+---
+
+## 7. Addendum Fase 3.6 — correzioni indici (VINCOLANTE)
+
+### 7.1 Indici aggiunti (mancanti)
+- `fin_cost_allocation (tenant_id, ref_type, ref_id)`
+- `dsn_design_version` UNIQUE `(tenant_id, design_id, version)`
+- `sync.mutation_log` UNIQUE `(client_mutation_id)`, UNIQUE `(idempotency_key)`
+- `events.domain_event` UNIQUE `(tenant_id, aggregate_type, aggregate_id, aggregate_version)`
+- `events.outbox (status)`; `events.dlq (event_id)`
+- `prod_work_order_material (tenant_id, work_order_id)`, `(tenant_id, work_order_operation_id)`
+
+### 7.2 Indici rimossi (ridondanti)
+- Rimuovere gli indici su `(tenant_id)` **da soli** dove esiste già un composito
+  con `tenant_id` come **prefisso** (es. `sales_order`, `prod_work_order`,
+  `fin_invoice`, `inv_movement`): il prefisso del composito copre le query per tenant.
+
+### 7.3 Analytics
+- `machine_utilization` non è più OLTP: nessun indice su tabella OLTP; l'MV
+  `analytics.mv_machine_utilization` ha indice `(tenant_id, machine_id, period)`.
+
+### 7.4 Write cost
+- Su append-only ad alto volume (`inv_movement`, `events.domain_event`,
+  `audit.audit_log`, `sync.mutation_log`) tenere il **minimo** indispensabile di
+  indici per non penalizzare le scritture.

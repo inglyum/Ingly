@@ -69,3 +69,18 @@ dominio, automazioni, audit log, run/raccomandazioni AI, ruoli/permessi esplicit
 ```
 Nessuna migrazione automatica/distruttiva; dry-run obbligatorio; v96 resta la
 produzione finché la validazione non è approvata.
+
+---
+
+## 7. Addendum Fase 3.6 (coerenza con correzioni)
+- **Valuta/periodo**: all'import impostare `currency='EUR'`; date normalizzate ISO;
+  competenza ricavi su `issue_date`, cassa su `received_at`.
+- **Snapshot**: preventivi/ordini/fatture importati **congelano** unit_price/discount/
+  vat_rate/cost/line_total come colonne (non solo JSONB totals).
+- **Stock**: confermato — saldo iniziale come singolo `inv_movement` tipo `adjust`;
+  nessun `inv_balance` scritto a mano (deriva dai movimenti).
+- **Utilization/qualità/automazione**: nessuna sorgente v96 → partono da V2 con la
+  struttura corretta (MV utilization; qc unificata; conditions JSONB).
+- **Design→work order**: eventuali produzioni storiche importate puntano a una
+  `design_version` snapshot immutabile (se il dato manca, si crea una versione
+  "as-built" congelata).

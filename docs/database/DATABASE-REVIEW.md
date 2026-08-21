@@ -308,3 +308,28 @@ sposta utilization in analytics.)
 # DATABASE REVIEW STATUS: REQUIRES CHANGES
 Chiudere i 9 HIGH RISK + i "REQUIRED CHANGES" prima dell'implementazione. Nessuna
 tabella creata, nessun SQL, nessuna migrazione, v96 intatta.
+
+---
+
+## FINAL VALIDATION (post Fase 3.6) — stato per HR
+
+Seconda review dopo l'applicazione delle correzioni (addendum nei rispettivi doc).
+
+| HR | Tema | Stato | Nota |
+|--|--|--|--|
+| HR-1 | Race prenotazioni | **FIXED** | `reserve_material()` transazionale con `FOR UPDATE`/advisory lock + idempotency (database-v2 §9.1) |
+| HR-2 | Coerenza inv_balance | **FIXED** | balance = cache derivata da `inv_movement`, trigger unico + `reconcile_inventory()` + rebuild (§9.1) |
+| HR-3 | Costo/ricorsione RLS | **FIXED** | RLS via claim JWT, no funzioni per-riga, SECURITY DEFINER con search_path='' , policy non ricorsive (rls §9.1) |
+| HR-4 | Immutabilità design↔WO | **FIXED** | FK a `design_version`, trigger `wo_design_lock`, versioni immutabili (§9.4) |
+| HR-5 | Ordering eventi | **FIXED** | `aggregate_version` UNIQUE + dispatch ordinato + outbox in-TX (§9.5) |
+| HR-6 | Sync offline sicura | **FIXED** | inventory/order/production/finance = command server-validati; tabella policy per dominio (offline-sync §10) |
+| HR-7 | machine_utilization OLTP | **FIXED** | rimossa da OLTP → `analytics.mv_machine_utilization` (§9.6) |
+| HR-8 | Storage tenant boundary | **FIXED** | bucket privati, path per-tenant, storage policy, signed URL (rls §9.2) |
+| HR-9 | MV tenant-safe | **FIXED** | tutte le MV con `tenant_id` + RLS/funzioni per-tenant (rls §9.3) |
+
+APPROVED WITH CHANGES recepiti: snapshot colonne su item, currency/periodo, indici
+(add/remove), merge QC, automation.condition→JSONB. Nessun HR residuo UNRESOLVED.
+
+**REVISED STATUS: READY FOR IMPLEMENTATION (in staging)** — subordinato alla suite
+di test (RLS anti-leakage, concorrenza stock, immutabilità, ordering, sync, Storage)
+da eseguire in staging prima di qualsiasi uso reale. v96 intatta.
