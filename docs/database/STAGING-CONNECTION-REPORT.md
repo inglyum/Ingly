@@ -88,3 +88,24 @@ In attesa: CLI installata + project ref staging + credenziali come secret.
    con rete verso Supabase**. Poi `npx supabase link --project-ref uepyexyosyogyvzorata`.
 2. In alternativa eseguire link + `db push --dry-run` da una **macchina/CI** con
    accesso a Supabase (i file migrazione sono già pronti nel repo).
+
+---
+
+## Aggiornamento Fase 4.5 — token non visibile alla shell del tool
+- `SUPABASE_ACCESS_TOKEN` **non presente** nell'ambiente dei comandi eseguiti da
+  questa sessione (ogni comando parte da una shell nuova dal profilo; una variabile
+  esportata nel terminale interattivo dell'utente **non** si propaga qui). Verificato
+  senza mai stamparne il valore.
+- Nessun file di profilo/`.env` contiene il nome della variabile.
+- Conseguenza: `supabase link` non eseguibile da qui → **STOP**. Nessun link,
+  nessun dry-run, produzione e V96 intatte.
+
+### Come rendere il token disponibile a QUESTA sessione (una delle due)
+1. Persistere il token in un profilo letto dalla shell non interattiva, es.
+   `~/.profile` o `~/.bashrc`: `export SUPABASE_ACCESS_TOKEN=…` (attenzione: finisce
+   in un file locale della sandbox; accettabile solo in ambiente effimero/staging,
+   mai committato). Poi ri-eseguire link + `db push --dry-run`.
+2. **Consigliato**: eseguire link + `db push --dry-run` da una **macchina/CI** con
+   `SUPABASE_ACCESS_TOKEN` in env e rete verso Supabase (i file migrazione sono già
+   nel repo). Comandi: `npx supabase link --project-ref uepyexyosyogyvzorata` →
+   `npx supabase db push --dry-run`.
