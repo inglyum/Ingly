@@ -44,11 +44,13 @@ describe('V2 App Shell — logica (offline)', (s) => {
     assertEq(JSON.stringify(decodeJwt('non-un-jwt')), '{}');
   });
 
-  it(s, 'renderShell mostra tenant, ruolo e nav tenant-aware', async () => {
+  it(s, 'renderShell mostra tenant, ruolo e nav raggruppata reale', async () => {
     const ctx = { email: 'a@b.it', activeTenant: 't1', tenantIds: ['t1'], roles: { t1: 'OWNER' } };
     const html = renderShell(ctx, 'dashboard');
     assert(html.includes('data-screen="shell"'), 'shell mancante');
-    assert(/data-nav="crm"/.test(html), 'nav CRM mancante');
+    assert(/data-route="clients"/.test(html), 'nav CRM (clients) mancante');
+    assert(/data-route="catalog"/.test(html), 'nav Catalogo mancante');
+    assert(/data-route="gestione_ordini"/.test(html), 'nav Ordini mancante');
     assert(html.includes('OWNER'), 'badge ruolo mancante');
     assert(html.includes('t1'), 'tenant attivo mancante');
   });
@@ -67,6 +69,52 @@ describe('V2 App Shell — logica (offline)', (s) => {
     // il check è testuale su "service_role"
     try { assertBrowserSafe({ anonKey: 'x-service_role-x' }); } catch (_) { threw = true; }
     assert(threw, 'service-role non bloccata');
+  });
+});
+
+const { MODULES, GROUP_ORDER } = await import('../app-v2/src/modules.js');
+const { renderView, IMPLEMENTED } = await import('../app-v2/src/views.js');
+
+describe('V2 Navigation parity (offline)', (s) => {
+  it(s, 'registro moduli estratto: >=90 moduli, 12 categorie', async () => {
+    assert(MODULES.length >= 90, `moduli: ${MODULES.length}`);
+    assert(GROUP_ORDER.length === 12, `gruppi: ${GROUP_ORDER.length}`);
+  });
+  it(s, 'ogni modulo del registro ha una voce nav (data-route) nella shell', async () => {
+    const html = renderShell({ tenantIds: ['t1'], roles: { t1: 'OWNER' }, activeTenant: 't1' }, 'dashboard');
+    MODULES.forEach((m) => assert(html.includes(`data-route="${m.s}"`), `nav mancante per ${m.s}`));
+  });
+  it(s, 'le categorie reali compaiono come titoli di gruppo', async () => {
+    const html = renderShell({ tenantIds: [], roles: {}, activeTenant: null });
+    ['AI', 'Preventivi', 'Vendite', 'Finanza', 'Clienti', 'Produzione', 'Magazzino', 'Marketing']
+      .forEach((g) => assert(html.includes(g), `gruppo mancante: ${g}`));
+  });
+});
+
+describe('V2 Routing / rendering moduli (offline)', (s) => {
+  const ctx = { email: 'a@b.it', activeTenant: 't1', tenantIds: ['t1'], roles: { t1: 'OWNER' } };
+  it(s, 'nessuna route rotta: ogni modulo rende una pagina non vuota', async () => {
+    MODULES.forEach((m) => {
+      const html = renderView(m.s, ctx);
+      assert(html && html.includes(`data-page="${m.s}"`), `route rotta: ${m.s}`);
+      assert(html.length > 80, `pagina troppo scarna: ${m.s}`);
+    });
+  });
+  it(s, 'i 4 moduli prioritari sono implementati (IA reale)', async () => {
+    ['dashboard', 'clients', 'catalog', 'gestione_ordini'].forEach((k) =>
+      assert(IMPLEMENTED.includes(k), `non implementato: ${k}`));
+    assert(/v2-table/.test(renderView('clients', ctx)), 'CRM senza tabella');
+    assert(/v2-kanban/.test(renderView('gestione_ordini', ctx)), 'Ordini senza kanban');
+    assert(/v2-cards-grid/.test(renderView('catalog', ctx)), 'Catalogo senza griglia');
+  });
+  it(s, 'i moduli non implementati sono marcati "non ancora connesso" (nessun controllo finto)', async () => {
+    const html = renderView('cashflow', ctx); // modulo reale non ancora implementato
+    assert(/non ancora connesso a V2/i.test(html), 'manca badge non-connesso');
+  });
+  it(s, 'i controlli che richiedono backend sono disabilitati e marcati', async () => {
+    const html = renderView('clients', ctx);
+    assert(/v2-nyc[^>]*disabled/.test(html) || /disabled[^>]*v2-nyc/.test(html), 'controllo backend non disabilitato');
+    assert(/non ancora connesso/i.test(html), 'controllo non marcato');
   });
 });
 

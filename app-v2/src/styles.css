@@ -31,3 +31,39 @@ body{ background:var(--bg); color:var(--tx); font:14px/1.5 system-ui,-apple-syst
 .v2-kpi-v{ font-size:20px; font-weight:800; margin-top:4px; font-variant-numeric:tabular-nums }
 .v2-note{ font-size:12px; color:var(--mut); border:1px dashed var(--bd); border-radius:10px; padding:10px }
 @media (max-width:640px){ .v2-app{ grid-template-columns:1fr } .v2-sidebar{ border-right:none; border-bottom:1px solid var(--bd) } }
+
+/* ── V2 nav raggruppata + router views (Fase 8) ── */
+.v2-sidebar{ overflow-y:auto; max-height:100vh }
+.v2-nav-search{ width:100%; padding:7px 9px; margin:8px 0; border-radius:8px; background:var(--card2); color:var(--tx); border:1px solid var(--bd); font-size:12px }
+.v2-nav-group{ margin-bottom:6px }
+.v2-nav-gtitle{ font-size:10px; text-transform:uppercase; letter-spacing:.6px; color:var(--mut); padding:8px 6px 3px; font-weight:800 }
+.v2-nav-item{ display:flex; align-items:center; gap:9px; padding:7px 9px; border-radius:9px; color:var(--mut); text-decoration:none; font-size:12.5px }
+.v2-nav-item:hover{ background:var(--card2); color:var(--tx) }
+.v2-nav-item.active{ background:rgba(251,191,36,.12); color:var(--pri) }
+.v2-nav-ico{ width:18px; text-align:center; flex-shrink:0 }
+.v2-nav-lbl{ overflow:hidden; text-overflow:ellipsis; white-space:nowrap }
+.v2-page-head{ display:flex; align-items:flex-start; justify-content:space-between; gap:12px; margin-bottom:14px }
+.v2-page-head h2{ margin:0 } .v2-page-actions{ display:flex; gap:8px }
+.v2-tabs{ display:flex; gap:4px; background:var(--card2); padding:4px; border-radius:10px; width:fit-content; margin-bottom:12px }
+.v2-tab{ padding:6px 14px; border:none; border-radius:7px; background:none; color:var(--mut); cursor:pointer; font:inherit }
+.v2-tab.active{ background:var(--card); color:var(--pri); font-weight:700 }
+.v2-toolbar{ display:flex; gap:8px; align-items:center; flex-wrap:wrap; margin-bottom:12px }
+.v2-search{ flex:1; min-width:180px; padding:9px 12px; border-radius:9px; background:var(--card2); color:var(--tx); border:1px solid var(--bd) }
+.v2-filter{ padding:9px; border-radius:9px; background:var(--card2); color:var(--tx); border:1px solid var(--bd) }
+.v2-chk{ display:flex; align-items:center; gap:6px; font-size:12px; color:var(--mut) }
+.v2-nyc{ background:var(--card2); color:var(--mut); border:1px dashed var(--bd); cursor:not-allowed; font-weight:600 }
+.v2-nyc-tag{ font-size:9px; background:rgba(251,191,36,.14); color:var(--pri); padding:1px 6px; border-radius:99px; margin-left:6px }
+.v2-badge-nyc{ display:inline-block; font-size:11px; font-weight:800; color:var(--pri); background:rgba(251,191,36,.12); border:1px solid rgba(251,191,36,.3); padding:4px 10px; border-radius:99px; margin-bottom:10px }
+.v2-empty{ padding:22px; text-align:center; color:var(--mut); font-size:13px; border:1px dashed var(--bd); border-radius:10px }
+.v2-cols{ display:grid; grid-template-columns:1fr 1fr; gap:14px; margin-top:14px }
+.v2-card h3{ margin:0 0 10px; font-size:14px }
+.v2-table-wrap{ overflow-x:auto; border:1px solid var(--bd); border-radius:10px }
+.v2-table{ width:100%; border-collapse:collapse; font-size:13px }
+.v2-table th{ background:var(--card2); text-align:left; padding:9px 12px; font-size:11px; text-transform:uppercase; letter-spacing:.4px; color:var(--mut) }
+.v2-table td{ padding:10px 12px; border-top:1px solid var(--bd) }
+.v2-cards-grid{ display:grid; grid-template-columns:repeat(auto-fill,minmax(180px,1fr)); gap:12px }
+.v2-kanban{ display:grid; grid-template-columns:repeat(4,1fr); gap:12px }
+.v2-kcol{ background:var(--card2); border:1px solid var(--bd); border-radius:12px; padding:10px; min-height:160px }
+.v2-kcol-h{ display:flex; justify-content:space-between; font-weight:700; font-size:12px; margin-bottom:8px }
+.v2-kcount{ background:var(--card); border-radius:99px; padding:0 7px; color:var(--mut) }
+@media (max-width:900px){ .v2-cols,.v2-kanban{ grid-template-columns:1fr } }
