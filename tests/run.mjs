@@ -4,5 +4,6 @@ import './catalog.test.mjs';
 import './auth.test.mjs';
 import './bundle.test.mjs';
 import './staging_sql.test.mjs';
+import './app_v2_shell.test.mjs';
 import { run } from './harness.mjs';
 await run();

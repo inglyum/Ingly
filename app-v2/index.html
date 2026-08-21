@@ -1,0 +1,23 @@
+<!doctype html>
+<html lang="it">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>INGLY OS V2 — Staging</title>
+  <link rel="stylesheet" href="./src/styles.css">
+</head>
+<body>
+  <div id="v2-root" class="v2-root"><noscript>Attiva JavaScript.</noscript></div>
+  <!-- lib Supabase vendored (CSP-safe). Assente in test → mock iniettato. -->
+  <script src="./vendor/supabase.js"></script>
+  <!-- config runtime da env (git-ignored). Se assente → stato "config richiesta". -->
+  <script src="./env.js" onerror="console.info('env.js assente: stato config-required')"></script>
+  <script type="module">
+    import { boot } from './src/app.js';
+    boot(document.getElementById('v2-root')).catch((e) => {
+      document.getElementById('v2-root').innerHTML =
+        '<pre style="padding:16px;color:#b00">Errore boot V2: ' + (e && e.message || e) + '</pre>';
+    });
+  </script>
+</body>
+</html>

@@ -13,6 +13,7 @@
     "build": "vite build"
   },
   "devDependencies": {
+    "@supabase/supabase-js": "^2.112.3",
     "playwright": "^1.48.0",
     "supabase": "^2.115.0",
     "typescript": "^5.6.0",
