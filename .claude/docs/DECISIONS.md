@@ -31,3 +31,20 @@ l'esito reale.
   e sicuro. Trail audit armato solo +6s dopo il boot per non registrare rumore.
 - **Regola anti-freeze confermata**: nessun modulo tocca `App.navigate`
   (resta `writable:false, configurable:false`). Nav test v67: 133–185ms/sezione.
+
+## 2026-08-22 — CRM V2 a schede (ERP acceleration)
+- **CRM come modulo unico a schede** (Clienti · Aziende · Attività) sulla route
+  `clients`, non nuove voci di nav: evita duplicazione del CRM.
+- **Attività = log immutabile**: confermata la scelta di Phase 14 (RLS solo
+  SELECT+INSERT su `crm_activity`). Le "attività-task" (scadenza, assegnatario,
+  priorità, completamento) NON sono state forzate sullo store immutabile: farebbe
+  regredire la garanzia di immutabilità testata. Se serviranno task, andranno in
+  una migration additiva dedicata (nuovo store o colonne nullable + policy update
+  motivata), decisione separata da concordare — non un side-effect del "vai veloce".
+- **Contatti**: CRUD completo con le colonne esistenti (name/role/email/phone/
+  deleted_at). `notes`/`company_id` sul contatto NON esistono a schema: non
+  inventati; eventuale aggiunta = migration additiva quando richiesto.
+- **RLS insert** ("new row violates row-level security"): risolto lato Supabase
+  in 0005/0006 (current_tenant_ids con fallback membership + has_permission).
+  Il frontend forza `tenant_id = ctx.activeTenant` risolto da context.js. Nessun
+  bypass RLS lato client.
