@@ -157,8 +157,49 @@ $env:RBAC_SALES_PASSWORD   = "<...>"
 $env:RBAC_VIEWER_PASSWORD  = "<...>"
 node scripts/provision-rbac-test-users.mjs
 ```
-Lo script è idempotente e stampa solo email+ruolo (mai password/chiavi). La
+Lo script è idempotente (crea se assente, non tocca password esistenti), fa il
+**read-back di verifica** (membership `active` + `user_role→role.key`) e stampa
+il report `PHASE 14C PROVISIONING`. Non stampa mai password/chiavi. La
 service-role key **non** va nel repo: solo in questa sessione.
+
+### Comando unico guidato (PowerShell) — provisioning + verifica
+Incolla questo blocco, sostituisci solo i placeholder `INSERISCI_...` con i
+valori reali (le password le scegli tu, una volta, e restano solo in sessione):
+
+```powershell
+# ── STAGING ONLY — nessun valore va committato ──────────────────────────────
+$env:EXPECTED_PROJECT_REF        = "uepyexyosyogyvzorata"
+$env:SUPABASE_URL                = "https://uepyexyosyogyvzorata.supabase.co"
+$env:SUPABASE_ANON_KEY           = "INSERISCI_ANON_KEY"          # publishable/anon STAGING
+$env:SUPABASE_SERVICE_ROLE_KEY   = "INSERISCI_SERVICE_ROLE_KEY"  # solo provisioning, server-side
+
+# email fisse degli utenti di test (servono anche a PHASE 14B)
+$env:RBAC_OWNER_EMAIL   = "ingly-rbac-owner@staging.ingly.test"
+$env:RBAC_ADMIN_EMAIL   = "ingly-rbac-admin@staging.ingly.test"
+$env:RBAC_MANAGER_EMAIL = "ingly-rbac-manager@staging.ingly.test"
+$env:RBAC_SALES_EMAIL   = "ingly-rbac-sales@staging.ingly.test"
+$env:RBAC_VIEWER_EMAIL  = "ingly-rbac-viewer@staging.ingly.test"
+
+# password (scelte da te, riusate per creazione + login harness)
+$env:RBAC_OWNER_PASSWORD   = "INSERISCI_PASSWORD"
+$env:RBAC_ADMIN_PASSWORD   = "INSERISCI_PASSWORD"
+$env:RBAC_MANAGER_PASSWORD = "INSERISCI_PASSWORD"
+$env:RBAC_SALES_PASSWORD   = "INSERISCI_PASSWORD"
+$env:RBAC_VIEWER_PASSWORD  = "INSERISCI_PASSWORD"
+
+node .\scripts\provision-rbac-test-users.mjs
+```
+
+Se il report finale mostra `Tenant membership: PASS` e `Role assignment: PASS`,
+nella **stessa** finestra PowerShell (le env sono già impostate) esegui solo:
+
+```powershell
+node .\tests\live_rbac_staging.mjs
+```
+
+> La service-role key serve **solo** al provisioning. Se preferisci non tenerla
+> in sessione dopo, chiudi la finestra: le password restano in env solo finché
+> la sessione è aperta e non vengono mai scritte su disco.
 
 ---
 

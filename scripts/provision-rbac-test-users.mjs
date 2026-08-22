@@ -59,16 +59,30 @@ async function rest(method, path, body, prefer) {
   return { ok: r.ok, status: r.status, data, txt };
 }
 
-// Trova o crea l'utente auth. La password arriva SOLO da env e non viene mai loggata.
+// Cerca un utente auth per email paginando l'Admin API (GoTrue non ha un
+// filtro ?email affidabile). Ritorna l'id o null.
+async function findUserByEmail(email) {
+  for (let page = 1; page <= 20; page++) {
+    const q = await adminApi('GET', `admin/users?page=${page}&per_page=200`);
+    const users = q.ok && Array.isArray(q.j.users) ? q.j.users : [];
+    const hit = users.find((u) => (u.email || '').toLowerCase() === email.toLowerCase());
+    if (hit) return { id: hit.id, existed: true };
+    if (users.length < 200) break; // ultima pagina
+  }
+  return null;
+}
+
+// Idempotente: crea se assente; se già esiste NON tocca la password.
 async function ensureUser(email, password) {
-  // cerca per email (Admin API list con filtro)
-  const q = await adminApi('GET', `admin/users?email=${encodeURIComponent(email)}`);
-  const found = q.ok && Array.isArray(q.j.users) ? q.j.users.find((u) => u.email === email) : null;
-  if (found) return found.id;
-  if (!password) throw new Error(`password mancante in env per ${email}`);
-  const c = await adminApi('POST', 'admin/users', { email, password, email_confirm: true });
-  if (!c.ok || !c.j.id) throw new Error(`creazione utente fallita ${email}: ${c.status}`);
-  return c.j.id;
+  const c = password
+    ? await adminApi('POST', 'admin/users', { email, password, email_confirm: true })
+    : { ok: false, status: 0, j: {} };
+  if (c.ok && c.j.id) return { id: c.j.id, created: true };
+  // già esistente (422 email_exists) o password mancante → cerca l'id senza modificarla
+  const found = await findUserByEmail(email);
+  if (found) return { id: found.id, created: false };
+  if (!password) throw new Error(`utente ${email} assente e nessuna password in env per crearlo`);
+  throw new Error(`creazione utente fallita ${email}: ${c.status} ${c.j.error_code || c.j.msg || ''}`);
 }
 
 async function tenantId() {
@@ -84,25 +98,58 @@ async function roleId(key) {
   return id;
 }
 
+// Verifica read-back (equivalente alla SELECT di join richiesta): per ogni
+// utente conferma membership 'active' e user_role→role.key nel tenant.
+async function verify(tid) {
+  const out = {};
+  for (const u of USERS) {
+    const f = await findUserByEmail(u.email);
+    if (!f) { out[u.role] = { present: false }; continue; }
+    const m = await rest('GET', `tenant_membership?select=status&tenant_id=eq.${tid}&user_id=eq.${f.id}`);
+    const ur = await rest('GET', `user_role?select=role:role_id(key)&tenant_id=eq.${tid}&user_id=eq.${f.id}`);
+    const status = Array.isArray(m.data) && m.data[0] && m.data[0].status;
+    const rkey = Array.isArray(ur.data) && ur.data[0] && ur.data[0].role && ur.data[0].role.key;
+    out[u.role] = { present: true, status, role: rkey };
+  }
+  return out;
+}
+
 (async () => {
   const tid = await tenantId();
-  const results = [];
+  const state = {};
   for (const u of USERS) {
     try {
       const pwd = process.env[`RBAC_${u.role}_PASSWORD`] || '';
-      const uid = await ensureUser(u.email, pwd);
+      const { id: uid, created } = await ensureUser(u.email, pwd);
       const rid = await roleId(u.role);
       // service-role bypassa RLS: upsert membership + ruolo (idempotente).
       await rest('POST', 'profile', { id: uid, full_name: `${u.role} Test`, locale: 'it' }, 'resolution=ignore-duplicates');
       await rest('POST', 'tenant_membership', { tenant_id: tid, user_id: uid, status: 'active' }, 'resolution=merge-duplicates');
       await rest('POST', 'user_role', { tenant_id: tid, user_id: uid, role_id: rid }, 'resolution=merge-duplicates');
-      results.push(`  ${u.role.padEnd(8)} ${u.email}  → OK`);
+      state[u.role] = created ? 'CREATED' : 'PRESENT';
     } catch (e) {
-      results.push(`  ${u.role.padEnd(8)} ${u.email}  → ERRORE: ${e.message}`);
+      state[u.role] = 'ERRORE: ' + e.message;
     }
   }
-  console.log(`\nPHASE 14C — provisioning su staging (${ref}), tenant ${TENANT_SLUG}:`);
-  console.log(results.join('\n'));
-  console.log('\nFatto. Ora imposta RBAC_*_EMAIL/PASSWORD in env ed esegui: node tests/live_rbac_staging.mjs');
-  process.exit(results.some((l) => l.includes('ERRORE')) ? 1 : 0);
+
+  const v = await verify(tid);
+  const membOk = USERS.every((u) => v[u.role] && v[u.role].status === 'active');
+  const roleOk = USERS.every((u) => v[u.role] && v[u.role].role === u.role);
+
+  // ── REPORT (formato PHASE 14C PROVISIONING) ───────────────────────────────
+  console.log('\nPHASE 14C PROVISIONING\n');
+  console.log(`Project: ${ref}`);
+  console.log('Environment: STAGING\n');
+  for (const u of USERS) {
+    const s = String(state[u.role] || '—');
+    const r = (v[u.role] && v[u.role].role) || '—';
+    console.log(`${u.role.padEnd(8)} ${s.startsWith('ERRORE') ? s : s.padEnd(9) + ' ' + r}`);
+  }
+  console.log(`\nTenant membership: ${membOk ? 'PASS' : 'FAIL'}`);
+  console.log(`Role assignment: ${roleOk ? 'PASS' : 'FAIL'}`);
+  console.log('\nProduction touched: NO');
+  console.log('V96 touched: NO');
+  console.log('Migration changed: NO');
+  console.log(`\nNext step:\n${membOk && roleOk ? 'READY FOR PHASE 14B' : 'FIX PROVISIONING (vedi righe ERRORE sopra)'}`);
+  process.exit(membOk && roleOk ? 0 : 1);
 })().catch((e) => { console.error('ERRORE runtime:', e.message); process.exit(1); });
