@@ -48,3 +48,22 @@ l'esito reale.
   in 0005/0006 (current_tenant_ids con fallback membership + has_permission).
   Il frontend forza `tenant_id = ctx.activeTenant` risolto da context.js. Nessun
   bypass RLS lato client.
+
+## 2026-08-22 — Modulo Preventivi (sales_quote) — base flusso vendite
+- **Nuove tabelle** `sales_quote` + `sales_quote_line` (migration 0008 additiva):
+  nessuna tabella preventivi preesistente (audit su quote/quotation/estimate/
+  sales/order/invoice → 0 risultati). Non è un secondo CRM.
+- **RBAC riusato**: resource unico `sales.quote` (read/create/update/delete) con
+  la stessa matrice del CRM; policy = tenant + has_permission; soft-delete via il
+  trigger condiviso `crm_enforce_delete_perm`. Nessun secondo sistema autorizzativo.
+- **Numerazione** per-tenant race-safe: `sales_quote_counter` + funzione
+  SECURITY DEFINER `next_quote_number` (UPSERT atomico), assegnata da trigger
+  BEFORE INSERT (mai dal frontend). Formato `PREV-000001`.
+- **Totali deterministici lato DB**: `line_total` colonna generata; trigger
+  `sales_quote_recalc` aggiorna subtotal/discount/tax/total dalle righe. Il client
+  calcola solo per display (computeTotals), il DB è la fonte di verità.
+- **Snapshot storico**: `sales_quote_line.description`/`unit_price` copiati dal
+  prodotto; `product_id` FK ON DELETE SET NULL → un preventivo emesso non cambia
+  se il prodotto cambia/viene rimosso. Base pronta per Order→Invoice→Payment.
+- **Dashboard**: aggiunti solo KPI realmente calcolabili (totali/bozze/inviati/
+  accettati + valore accettati). Ricavi/margine reali restano per Ordini/Fatture.

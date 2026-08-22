@@ -60,7 +60,12 @@ function viewGeneric(section) {
     </div>`;
 }
 
-const SPECIAL = { dashboard: viewDashboard, clients: viewClients, catalog: viewCatalog, gestione_ordini: viewOrders };
+function viewQuotes() {
+  return `${head({ icon: '🧾', n: 'Preventivi' }, 'Preventivi · righe · totali · validità 7gg · connesso a Supabase')}
+    <div data-quotes-root><div class="v2-loading">⏳ Inizializzazione preventivi…</div></div>`;
+}
+
+const SPECIAL = { dashboard: viewDashboard, clients: viewClients, catalog: viewCatalog, quotes: viewQuotes, gestione_ordini: viewOrders };
 
 export function renderView(section, ctx) {
   const fn = SPECIAL[section];

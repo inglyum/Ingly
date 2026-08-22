@@ -106,3 +106,10 @@ body{ background:var(--bg); color:var(--tx); font:14px/1.5 system-ui,-apple-syst
   .v2-toolbar .v2-search{ flex:1 1 100% }
 }
 .v2-table th, .v2-table td{ white-space:nowrap }
+
+/* Preventivi — riepilogo totali */
+.v2-summary{ margin-top:14px; margin-left:auto; max-width:320px; display:grid; gap:6px }
+.v2-summary > div{ display:flex; justify-content:space-between; font-size:13px; color:var(--mut) }
+.v2-summary > div b{ color:var(--txt) }
+.v2-summary-tot{ border-top:1px solid var(--bd); padding-top:6px; margin-top:2px; font-size:15px }
+.v2-summary-tot span, .v2-summary-tot b{ color:var(--txt); font-weight:700 }

@@ -24,6 +24,11 @@ export function renderDashboard(d) {
     <div class="v2-grid" style="margin-top:10px">
       <div class="v2-kpi"><div class="v2-kpi-l">Clienti B2B</div><div class="v2-kpi-v">${d.b2b}</div></div>
       <div class="v2-kpi"><div class="v2-kpi-l">Clienti B2C</div><div class="v2-kpi-v">${d.b2c}</div></div>
+      <div class="v2-kpi"><div class="v2-kpi-l">Preventivi</div><div class="v2-kpi-v">${d.quotesTotal || 0}</div></div>
+      <div class="v2-kpi"><div class="v2-kpi-l">Bozze</div><div class="v2-kpi-v">${d.quotesDraft || 0}</div></div>
+      <div class="v2-kpi"><div class="v2-kpi-l">Inviati</div><div class="v2-kpi-v">${d.quotesSent || 0}</div></div>
+      <div class="v2-kpi"><div class="v2-kpi-l">Accettati</div><div class="v2-kpi-v">${d.quotesAccepted || 0}</div></div>
+      <div class="v2-kpi"><div class="v2-kpi-l">Valore accettati</div><div class="v2-kpi-v">${eur(d.quotesAcceptedValue || 0)}</div></div>
     </div>
     <div class="v2-cols" style="margin-top:14px">
       <div class="v2-card"><h3>Ultimi clienti</h3><ul class="v2-list">${recent}</ul></div>

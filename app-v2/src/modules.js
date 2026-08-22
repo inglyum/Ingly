@@ -12,6 +12,7 @@ export const MODULES = [
   {"s":"intel","n":"Intelligence Hub","icon":"⚡","group":"AI"},
   {"s":"market_agent","n":"Market AI Agent","icon":"🤖","group":"AI"},
   {"s":"studio_ai","n":"AI Studio","icon":"✨","group":"AI"},
+  {"s":"quotes","n":"Preventivi","icon":"🧾","group":"Preventivi"},
   {"s":"quoter","n":"Smart Quoter","icon":"📄","group":"Preventivi"},
   {"s":"lasercalc","n":"🧮 Calc Laser","icon":"⚡","group":"Preventivi"},
   {"s":"print3d","n":"Smart Quote 3D","icon":"🖨️","group":"Preventivi"},
