@@ -30,15 +30,10 @@ function viewClients() {
     <div data-crm-root><div data-crm-pane><div class="v2-loading">⏳ Inizializzazione CRM…</div></div></div>`;
 }
 
-// ── CATALOGO ─────────────────────────────────────────────────────────────
+// ── CATALOGO (live: montato dal router via catalog-ui.js) ──────────────────
 function viewCatalog() {
-  return `${head({ icon: '📚', n: 'Catalogo' }, 'Prodotti · varianti · pricing')}
-    <div class="v2-toolbar">
-      <input class="v2-search" data-search="catalog" placeholder="🔍 Cerca prodotto per nome/SKU…">
-      <label class="v2-chk"><input type="checkbox" data-filter="onlyIngly"> Solo Ingly</label>
-      ${nyc('+ Prodotto')} ${nyc('Importa catalogo')}
-    </div>
-    <div class="v2-cards-grid" data-rows="catalog">${empty('Nessun prodotto — collega il backend staging per caricare il catalogo.')}</div>`;
+  return `${head({ icon: '📚', n: 'Catalogo' }, 'Prodotti · servizi · pricing · connesso a Supabase')}
+    <div data-catalog-root><div class="v2-loading">⏳ Inizializzazione catalogo…</div></div>`;
 }
 
 // ── ORDINI & WORKFLOW ────────────────────────────────────────────────────

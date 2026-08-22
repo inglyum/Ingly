@@ -35,6 +35,7 @@ function seed() {
       { id: 'c3', tenant_id: 't1', name: 'Rmvd', type: 'B2C', value_cached: 5, deleted_at: '2026-01-01' },
     ],
     crm_company: [{ id: 'co1', tenant_id: 't1', name: 'Blu', deleted_at: null }],
+    catalog_product: [{ id: 'p1', tenant_id: 't1', name: 'Targa', kind: 'product', price: 29.9, active: true, deleted_at: null }],
     crm_activity: [
       { id: 'a1', tenant_id: 't1', customer_id: 'c1', type: 'note', body: 'x', occurred_at: '2026-01-01' },
       { id: 'a2', tenant_id: 't1', customer_id: 'c2', type: 'call', body: 'y', occurred_at: '2026-02-01' },
@@ -45,7 +46,7 @@ function seed() {
 describe('Dashboard data-layer (offline)', (s) => {
   it(s, 'loadDashboard aggrega conteggi e valore escludendo soft-deleted', async () => {
     const d = await loadDashboard(makeMock(seed()));
-    assertEq(d.customers, 2); assertEq(d.companies, 1); assertEq(d.activities, 2);
+    assertEq(d.customers, 2); assertEq(d.companies, 1); assertEq(d.activities, 2); assertEq(d.products, 1);
     assertEq(d.b2b, 1); assertEq(d.b2c, 1); assertEq(d.totalValue, 1000);
     assertEq(d.recentActivities[0].id, 'a2'); // ordinamento desc
     assertEq(d.error, null);

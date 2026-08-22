@@ -11,7 +11,7 @@ const day = (s) => esc((s || '').slice(0, 10));
 export function renderDashboard(d) {
   const kpis = [
     ['Clienti', d.customers], ['Aziende', d.companies],
-    ['Valore clienti', eur(d.totalValue)], ['Attività', d.activities],
+    ['Prodotti/Servizi', d.products || 0], ['Valore clienti', eur(d.totalValue)],
   ];
   const recent = (d.recentCustomers || []).map((c) =>
     `<li><b>${esc(c.name)}</b> <span class="v2-chip">${esc(c.type || 'B2C')}</span> <span class="v2-muted">${eur(c.value_cached)}</span></li>`).join('')

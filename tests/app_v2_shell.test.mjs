@@ -105,16 +105,15 @@ describe('V2 Routing / rendering moduli (offline)', (s) => {
       assert(IMPLEMENTED.includes(k), `non implementato: ${k}`));
     assert(/data-crm-pane/.test(renderView('clients', ctx)), 'CRM senza pane live');
     assert(/v2-kanban/.test(renderView('gestione_ordini', ctx)), 'Ordini senza kanban');
-    assert(/v2-cards-grid/.test(renderView('catalog', ctx)), 'Catalogo senza griglia');
+    assert(/data-catalog-root/.test(renderView('catalog', ctx)), 'Catalogo senza root live');
   });
   it(s, 'i moduli non implementati sono marcati "non ancora connesso" (nessun controllo finto)', async () => {
     const html = renderView('cashflow', ctx); // modulo reale non ancora implementato
     assert(/non ancora connesso a V2/i.test(html), 'manca badge non-connesso');
   });
-  it(s, 'i controlli che richiedono backend (catalog/ordini) sono disabilitati e marcati', async () => {
-    const html = renderView('catalog', ctx);
-    assert(/v2-nyc[^>]*disabled/.test(html) || /disabled[^>]*v2-nyc/.test(html), 'controllo backend non disabilitato');
-    assert(/non ancora connesso/i.test(html), 'controllo non marcato');
+  it(s, 'i moduli non ancora connessi mostrano il badge (nessun controllo finto)', async () => {
+    const html = renderView('suppliers', ctx); // modulo backend non ancora implementato
+    assert(/non ancora connesso/i.test(html), 'modulo non marcato');
   });
 });
 

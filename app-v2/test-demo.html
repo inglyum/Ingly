@@ -1,47 +1,39 @@
 <!doctype html>
 <html lang="it"><head>
 <meta charset="utf-8"><meta name="viewport" content="width=device-width, initial-scale=1">
-<title>INGLY OS V2 — Demo test CRM + Dashboard (offline)</title>
+<title>INGLY OS V2 — Tool completo (demo offline)</title>
 <link rel="stylesheet" href="./src/styles.css">
 <style>
   body{ margin:0; background:var(--bg,#0b0f14); color:var(--txt,#e5e7eb); font-family:system-ui,-apple-system,Segoe UI,Roboto,sans-serif }
-  .demo-top{ display:flex; gap:8px; align-items:center; padding:12px 16px; border-bottom:1px solid var(--bd,#1f2937); flex-wrap:wrap }
-  .demo-top h1{ font-size:15px; margin:0 12px 0 0 }
-  .demo-top .v2-tab{ border:1px solid var(--bd,#1f2937) }
-  .demo-note{ padding:8px 16px; font-size:12px; color:var(--mut,#9ca3af) }
-  #demo-view{ padding:16px; max-width:1100px; margin:0 auto }
-  select.demo-role{ background:var(--card,#111827); color:inherit; border:1px solid var(--bd,#1f2937); border-radius:7px; padding:5px 8px }
+  #demo-banner{ position:fixed; z-index:60; right:12px; bottom:12px; display:flex; gap:8px; align-items:center;
+    background:var(--card,#111827); border:1px solid var(--bd,#1f2937); border-radius:10px; padding:8px 12px; box-shadow:0 8px 24px rgba(0,0,0,.3); font-size:12px }
+  #demo-banner select{ background:var(--bg,#0b0f14); color:inherit; border:1px solid var(--bd,#1f2937); border-radius:6px; padding:4px 6px }
+  #app{ min-height:100vh }
 </style>
 </head><body>
-<div class="demo-top">
-  <h1>🧪 INGLY OS V2 — Demo test (offline, dati finti in memoria)</h1>
-  <button class="v2-tab active" data-view="dashboard">📊 Dashboard</button>
-  <button class="v2-tab" data-view="clients">👥 CRM</button>
-  <label style="margin-left:auto;font-size:12px">Ruolo:
-    <select class="demo-role" id="role">
-      <option>OWNER</option><option>ADMIN</option><option>MANAGER</option>
-      <option selected>SALES</option><option>VIEWER</option>
-    </select>
-  </label>
+<div id="app"></div>
+<div id="demo-banner">
+  🧪 Demo offline (mock, nessuna staging) · Ruolo:
+  <select id="demo-role">
+    <option>OWNER</option><option>ADMIN</option><option>MANAGER</option>
+    <option selected>SALES</option><option>VIEWER</option>
+  </select>
 </div>
-<div class="demo-note">Questo file NON tocca Supabase: usa un mock in memoria per provare CRUD, ricerca, filtri, dettagli, dashboard e permessi RBAC (cambia ruolo in alto). Ricaricando la pagina i dati si resettano.</div>
-<div id="demo-view"></div>
 
 <script type="module">
-import { mount as mountCrm } from './src/crm-ui.js';
-import { mount as mountDashboard } from './src/dashboard-ui.js';
+import { renderShell } from './src/app.js';
+import { mountRouter } from './src/router.js';
 
-// ── Mock Supabase in memoria (subset usato da crm.js/dashboard.js) ──────────
+// ── Mock Supabase in memoria (subset usato dai data-layer) ──────────────────
 function makeMock(store){
-  let uid = 1000;
-  const now = () => new Date().toISOString();
+  let uid = 2000; const now = () => new Date().toISOString();
   function builder(table){
     const st = { table, filters:[], op:'select', payload:null, orderBy:null, asc:true, lim:null };
     const api = {
       select(){ return api; },
       is(c,v){ st.filters.push(r => r[c]===v || (v===null && r[c]==null)); return api; },
       eq(c,v){ st.filters.push(r => String(r[c])===String(v)); return api; },
-      or(expr){ const parts=expr.split(',').map(p=>{const m=p.match(/^(\w+)\.ilike\.%(.*)%$/);return m?{col:m[1],q:m[2].toLowerCase()}:null;}).filter(Boolean);
+      or(expr){ const parts=String(expr).split(',').map(p=>{const m=p.match(/^(\w+)\.ilike\.%(.*)%$/);return m?{col:m[1],q:m[2].toLowerCase()}:null;}).filter(Boolean);
         st.filters.push(r => parts.some(p => String(r[p.col]||'').toLowerCase().includes(p.q))); return api; },
       order(c,o){ st.orderBy=c; st.asc=!o||o.ascending; return api; },
       limit(n){ st.lim=n; return api; },
@@ -67,7 +59,6 @@ function makeMock(store){
   return { from:t=>builder(t) };
 }
 
-// Dati demo
 function seed(){
   return {
     crm_company:[
@@ -86,22 +77,34 @@ function seed(){
       { id:'a1', tenant_id:'t1', customer_id:'c1', type:'meeting', body:'Sopralluogo sala', occurred_at:'2026-08-10' },
       { id:'a2', tenant_id:'t1', customer_id:'c3', type:'call', body:'Preventivo menu QR', occurred_at:'2026-08-18' },
     ],
+    catalog_product:[
+      { id:'p1', tenant_id:'t1', sku:'TRG-A5', name:'Targa A5 incisa', category:'Targhe', kind:'product', price:29.90, cost:8, unit:'pz', active:true, deleted_at:null },
+      { id:'p2', tenant_id:'t1', sku:'QR-MENU', name:'QR Menu ristorante', category:'Ristoranti', kind:'service', price:19.90, cost:2, unit:'pz', active:true, deleted_at:null },
+      { id:'p3', tenant_id:'t1', sku:'CAKE-T', name:'Cake topper personalizzato', category:'Eventi', kind:'product', price:24.90, cost:6, unit:'pz', active:true, deleted_at:null },
+    ],
   };
 }
 
 const store = seed();
 const sb = makeMock(store);
-const view = document.getElementById('demo-view');
+const app = document.getElementById('app');
 
-function ctx(){ return { activeTenant:'t1', roles:{ t1: document.getElementById('role').value } }; }
-
-function show(which){
-  document.querySelectorAll('[data-view]').forEach(b=>b.classList.toggle('active', b.getAttribute('data-view')===which));
-  if(which==='dashboard'){ view.innerHTML='<div data-dash-pane></div>'; mountDashboard(view,{ sb }); }
-  else { view.innerHTML='<div data-crm-root></div>'; mountCrm(view,{ sb, ctx: ctx() }); }
+function ctx(){
+  const role = document.getElementById('demo-role').value;
+  return { activeTenant:'t1', tenantIds:['t1'], roles:{ t1: role }, email:'demo@ingly.test' };
 }
-document.querySelectorAll('[data-view]').forEach(b=>b.addEventListener('click',()=>show(b.getAttribute('data-view'))));
-document.getElementById('role').addEventListener('change',()=>{ const active=document.querySelector('[data-view].active').getAttribute('data-view'); show(active); });
-show('dashboard');
+function render(){
+  if(!location.hash) location.hash = '#/dashboard';
+  app.innerHTML = renderShell(ctx(), (location.hash||'').replace(/^#\/?/,'') || 'dashboard');
+  mountRouter(app, ctx(), sb);
+  // filtro sidebar
+  const ns = app.querySelector('#v2-nav-search');
+  if(ns) ns.addEventListener('input', ()=>{ const q=ns.value.toLowerCase().trim();
+    app.querySelectorAll('#v2-nav .v2-nav-item').forEach(a=>{ a.style.display = (!q||a.textContent.toLowerCase().includes(q))?'':'none'; });
+    app.querySelectorAll('#v2-nav .v2-nav-group').forEach(g=>{ const any=[...g.querySelectorAll('.v2-nav-item')].some(a=>a.style.display!=='none'); g.style.display=any?'':'none'; });
+  });
+}
+document.getElementById('demo-role').addEventListener('change', render);
+render();
 </script>
 </body></html>

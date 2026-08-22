@@ -9,5 +9,6 @@ import './crm.test.mjs';
 import './context.test.mjs';
 import './rbac.test.mjs';
 import './dashboard.test.mjs';
+import './catalog.v2.test.mjs';
 import { run } from './harness.mjs';
 await run();

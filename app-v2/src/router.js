@@ -3,6 +3,7 @@ import { renderView, wireView } from './views.js';
 import { findModule } from './modules.js';
 import { mount as mountCrm } from './crm-ui.js';
 import { mount as mountDashboard } from './dashboard-ui.js';
+import { mount as mountCatalog } from './catalog-ui.js';
 
 export function currentRoute() {
   const h = (typeof location !== 'undefined' && location.hash || '').replace(/^#\/?/, '');
@@ -18,6 +19,7 @@ export function mountRouter(root, ctx, sb) {
     wireView(view);
     if (r === 'clients' && sb) { try { mountCrm(view, { sb, ctx }); } catch (_) {} }
     if (r === 'dashboard' && sb) { try { mountDashboard(view, { sb }); } catch (_) {} }
+    if (r === 'catalog' && sb) { try { mountCatalog(view, { sb, ctx }); } catch (_) {} }
     root.querySelectorAll('[data-route]').forEach((b) =>
       b.classList.toggle('active', b.getAttribute('data-route') === r));
     const crumb = root.querySelector('#v2-crumb');
