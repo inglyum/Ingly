@@ -234,6 +234,30 @@ Exit `0` = **SECURITY VERIFIED**. I record creati dai test sono taggati
 
 ---
 
+## Troubleshooting — `400 Invalid login credentials` in PHASE 14B
+
+Sintomo: il provisioning riesce ma `node .\tests\live_rbac_staging.mjs` fallisce
+il login per tutti gli utenti con `400 Invalid login credentials`. Significa
+che gli account **esistono e sono confermati**, ma la password memorizzata non
+combacia con `RBAC_*_PASSWORD` (create con password diversa/vuota, oppure
+harness lanciato in una finestra dove le env password non erano impostate).
+
+Procedura sicura (nessun ricreare utenti, nessun tocco a RBAC):
+
+```powershell
+# stessa finestra, env già impostate (URL, ANON, SERVICE_ROLE, RBAC_*_EMAIL/PASSWORD)
+node .\scripts\check-rbac-login.mjs            # diagnosi: env PRESENT/MISSING, exists, email confirmed, login PASS/FAIL
+node .\scripts\reset-rbac-test-passwords.mjs   # allinea la password Auth al valore in env (solo se serve)
+node .\scripts\check-rbac-login.mjs            # riverifica: attesi 5 PASS
+node .\tests\live_rbac_staging.mjs             # solo dopo 5 PASS
+```
+
+- `check-rbac-login.mjs` è **read-only**: non modifica nulla; stampa solo
+  PRESENT/MISSING (+ lunghezza), stato utente e PASS/FAIL. Mai password/token.
+- `reset-rbac-test-passwords.mjs` fa solo `find-by-email` + admin update della
+  password (`email_confirm:true`). Rifiuta placeholder (`INSERISCI_PASSWORD`,
+  `PASSWORD_OWNER`, …) e password < 8 char. Non tocca ruoli/membership/schema.
+
 ## Pulizia (a validazione conclusa)
 Utenti e righe di test possono restare in staging per riuso. Per rimuoverli:
 elimina i 5 utenti da **Authentication → Users** (il `on delete cascade` su
