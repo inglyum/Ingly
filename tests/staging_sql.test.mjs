@@ -234,3 +234,52 @@ describe('Staging bootstrap — validazione statica', (s) => {
     assert((bootDown.match(/\$\$/g) || []).length % 2 === 0, '$$ non bilanciati (down)');
   });
 });
+
+// ── CRM RLS fix (Fase 13) ─────────────────────────────────────────────────
+const CRMRLS_UP = '20260101000005_crm_rls.sql';
+const CRMRLS_DOWN = '20260101000005_crm_rls_down.sql';
+const crmrls = readFileSync(join(MIG, CRMRLS_UP), 'utf8');
+const crmrlsDown = readFileSync(join(ROLL, CRMRLS_DOWN), 'utf8');
+
+describe('CRM RLS fix — validazione statica', (s) => {
+  it(s, 'migrazione + down esistono; down non in migrations/', async () => {
+    assert(existsSync(join(MIG, CRMRLS_UP)) && existsSync(join(ROLL, CRMRLS_DOWN)), 'file mancanti');
+    assert(!readdirSync(MIG).includes(CRMRLS_DOWN), 'down in migrations/');
+  });
+  it(s, 'ordering: 000005 dopo 000004', async () => { assert('20260101000005' > '20260101000004', 'ordering errato'); });
+  it(s, 'PARTE A: current_tenant_ids con FALLBACK membership (auth.uid) + SECURITY DEFINER + search_path=""', async () => {
+    assert(/create or replace function public\.current_tenant_ids/i.test(crmrls), 'funzione non ridefinita');
+    assert(/from public\.tenant_membership m[\s\S]*m\.user_id = auth\.uid\(\)/i.test(crmrls), 'fallback membership mancante');
+    assert(/security definer/i.test(crmrls) && /set search_path\s*=\s*''/.test(crmrls), 'DEFINER/search_path mancanti');
+  });
+  it(s, 'RLS abilitata su tutte e 4 le CRM', async () => {
+    ['crm_company', 'crm_customer', 'crm_contact', 'crm_activity'].forEach((t) =>
+      assert(new RegExp(`alter table public\\.${t}\\s+enable row level security`, 'i').test(crmrls), `RLS off ${t}`));
+  });
+  it(s, 'SELECT+INSERT+UPDATE per company/customer/contact; INSERT/UPDATE con current_tenant_ids()', async () => {
+    ['crm_company', 'crm_customer', 'crm_contact'].forEach((t) => {
+      assert(new RegExp(`create policy [\\w]+ on public\\.${t} for select`, 'i').test(crmrls), `no SELECT ${t}`);
+      assert(new RegExp(`create policy [\\w]+ on public\\.${t} for insert`, 'i').test(crmrls), `no INSERT ${t}`);
+      assert(new RegExp(`create policy [\\w]+ on public\\.${t} for update`, 'i').test(crmrls), `no UPDATE ${t}`);
+    });
+    assert((crmrls.match(/current_tenant_ids\(\)/g) || []).length >= 8, 'policy non usano current_tenant_ids');
+  });
+  it(s, 'crm_activity immutabile: solo SELECT/INSERT, revoke update', async () => {
+    assert(/create policy [\w]+ on public\.crm_activity for insert/i.test(crmrls), 'no INSERT activity');
+    assert(!/create policy [\w]+ on public\.crm_activity for update/i.test(crmrls), 'update policy su activity');
+    assert(/revoke update on public\.crm_activity from anon, authenticated/i.test(crmrls), 'activity non immutabile');
+  });
+  it(s, 'no hard-delete ai client', async () => {
+    assert(/revoke delete on[\s\S]*crm_customer[\s\S]*from anon, authenticated/i.test(crmrls), 'delete non revocato');
+    assert(!/for delete/i.test(crmrls), 'esiste una policy DELETE');
+  });
+  it(s, 'RLS resta abilitata (nessun disable) e nessun service_role', async () => {
+    assert(!/disable row level security/i.test(crmrls), 'RLS disabilitata!');
+    assert(!/service_role/i.test(crmrls), 'service_role citato');
+  });
+  it(s, 'down ripristina current_tenant_ids claim-only', async () => {
+    assert(/create or replace function public\.current_tenant_ids/i.test(crmrlsDown), 'down non ridefinisce');
+    assert(!/tenant_membership/i.test(crmrlsDown), 'down mantiene il fallback');
+  });
+  it(s, 'nessun ref di PRODUZIONE', async () => { assert(!crmrls.includes(PROD_REF) && !crmrlsDown.includes(PROD_REF), 'ref produzione'); });
+});
