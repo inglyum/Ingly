@@ -87,3 +87,4 @@ body{ background:var(--bg); color:var(--tx); font:14px/1.5 system-ui,-apple-syst
 .v2-form-row{ display:grid; grid-template-columns:1fr 1fr; gap:10px }
 .v2-form-actions{ display:flex; gap:8px; justify-content:flex-end; margin-top:14px }
 .v2-form-msg{ margin-top:8px; font-size:12px; color:var(--mut) }
+.v2-danger{ background:#7f1d1d; color:#fecaca; border:1px solid #b91c1c }

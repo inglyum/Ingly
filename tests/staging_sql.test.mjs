@@ -283,3 +283,59 @@ describe('CRM RLS fix — validazione statica', (s) => {
   });
   it(s, 'nessun ref di PRODUZIONE', async () => { assert(!crmrls.includes(PROD_REF) && !crmrlsDown.includes(PROD_REF), 'ref produzione'); });
 });
+
+// ── CRM server-side RBAC (Fase 14) ────────────────────────────────────────
+const RBAC_UP = '20260101000006_crm_server_rbac.sql';
+const RBAC_DOWN = '20260101000006_crm_server_rbac_down.sql';
+const rbac = readFileSync(join(MIG, RBAC_UP), 'utf8');
+const rbacDown = readFileSync(join(ROLL, RBAC_DOWN), 'utf8');
+
+describe('CRM server RBAC — validazione statica', (s) => {
+  it(s, 'migrazione + down esistono; down non in migrations/; ordering 0006>0005', async () => {
+    assert(existsSync(join(MIG, RBAC_UP)) && existsSync(join(ROLL, RBAC_DOWN)), 'file mancanti');
+    assert(!readdirSync(MIG).includes(RBAC_DOWN), 'down in migrations/');
+    assert('20260101000006' > '20260101000005', 'ordering errato');
+  });
+  it(s, 'seed permission crm.* e role_perm_cache (matrice)', async () => {
+    assert(/insert into public\.permission/i.test(rbac), 'permission non seminati');
+    assert(/insert into security\.role_perm_cache/i.test(rbac), 'role_perm_cache non seminata');
+    assert(/'crm\.customer'/.test(rbac) && /'crm\.activity'/.test(rbac), 'risorse crm mancanti');
+    assert(/on conflict/i.test(rbac), 'seed non idempotente');
+  });
+  it(s, 'helper has_permission + current_user_role: SECURITY DEFINER + search_path=""', async () => {
+    assert(/create or replace function public\.has_permission\(/i.test(rbac), 'has_permission mancante');
+    assert(/create or replace function public\.current_user_role\(/i.test(rbac), 'current_user_role mancante');
+    assert((rbac.match(/security definer/gi) || []).length >= 3, 'DEFINER mancante su helper/trigger');
+    assert((rbac.match(/set search_path\s*=\s*''/g) || []).length >= 3, "search_path='' mancante");
+    assert(/from security\.role_perm_cache/i.test(rbac), 'has_permission non usa role_perm_cache');
+  });
+  it(s, 'policy CRM usano has_permission (SELECT/INSERT/UPDATE)', async () => {
+    ['crm_company', 'crm_customer', 'crm_contact'].forEach((t) => {
+      assert(new RegExp(`create policy ${t}_sel[\\s\\S]*has_permission`, 'i').test(rbac), `SELECT senza permesso ${t}`);
+      assert(new RegExp(`create policy ${t}_ins[\\s\\S]*has_permission`, 'i').test(rbac), `INSERT senza permesso ${t}`);
+      assert(new RegExp(`create policy ${t}_upd[\\s\\S]*has_permission`, 'i').test(rbac), `UPDATE senza permesso ${t}`);
+    });
+    assert(/create policy crm_activity_ins[\s\S]*crm\.activity','create'/.test(rbac), 'activity insert senza permesso');
+  });
+  it(s, 'trigger delete-perm su customer/company/contact (soft-delete richiede delete)', async () => {
+    ['crm_customer', 'crm_company', 'crm_contact'].forEach((t) =>
+      assert(new RegExp(`create trigger ${t}_del_perm before update on public\\.${t}`, 'i').test(rbac), `trigger mancante ${t}`));
+    assert(/deleted_at is distinct from old\.deleted_at/i.test(rbac), 'trigger non controlla deleted_at');
+    assert(/has_permission\(new\.tenant_id, tg_argv\[0\], 'delete'\)/.test(rbac), 'trigger non verifica delete');
+  });
+  it(s, 'crm_contact: colonna deleted_at aggiunta (soft-delete)', async () => {
+    assert(/alter table public\.crm_contact add column if not exists deleted_at/i.test(rbac), 'deleted_at contact mancante');
+  });
+  it(s, 'RLS non disabilitata, nessun service_role, nessun hard-delete', async () => {
+    assert(!/disable row level security/i.test(rbac), 'RLS disabilitata');
+    assert(!/service_role/i.test(rbac), 'service_role citato');
+    assert(!/for delete/i.test(rbac), 'policy DELETE presente');
+  });
+  it(s, 'down: droppa helper/trigger, ripristina policy tenant-only, rimuove seed crm.*', async () => {
+    assert(/drop function if exists public\.has_permission/i.test(rbacDown), 'down non droppa has_permission');
+    assert(/drop trigger if exists crm_customer_del_perm/i.test(rbacDown), 'down non droppa trigger');
+    assert(/delete from security\.role_perm_cache where resource like 'crm\.%'/i.test(rbacDown), 'down non pulisce cache');
+    assert(!/has_permission/i.test(rbacDown.split('create policy')[1] || ''), 'policy down non tenant-only');
+  });
+  it(s, 'nessun ref di PRODUZIONE', async () => { assert(!rbac.includes(PROD_REF) && !rbacDown.includes(PROD_REF), 'ref produzione'); });
+});

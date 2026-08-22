@@ -21,15 +21,48 @@ export async function listCustomers(sb, opts = {}) {
 export async function getCustomer(sb, id) {
   const { data: customer, error } = await sb.from('crm_customer').select('*').eq('id', id).maybeSingle();
   if (error) throw error;
-  const { data: contacts } = await sb.from('crm_contact').select('*').eq('customer_id', id).order('created_at', { ascending: true });
+  const { data: contacts } = await sb.from('crm_contact').select('*').eq('customer_id', id).is('deleted_at', null).order('created_at', { ascending: true });
   const { data: activities } = await sb.from('crm_activity').select('*').eq('customer_id', id).order('occurred_at', { ascending: false });
   return { customer: customer || null, contacts: contacts || [], activities: activities || [] };
 }
 
-export async function listCompanies(sb) {
-  const { data, error } = await sb.from('crm_company').select('id,name').is('deleted_at', null).order('name', { ascending: true });
+// ── COMPANY CRUD ────────────────────────────────────────────────────────────
+export async function listCompanies(sb, opts = {}) {
+  let q = sb.from('crm_company').select('id,name,vat,tags').is('deleted_at', null);
+  if (opts.search) { const s = esc(opts.search); q = q.or(`name.ilike.%${s}%,vat.ilike.%${s}%`); }
+  const { data, error } = await q.order('name', { ascending: true }).limit(opts.limit || 200);
   if (error) throw error;
   return data || [];
+}
+export async function createCompany(sb, tenantId, data) {
+  const { data: out, error } = await sb.from('crm_company').insert({ ...data, tenant_id: tenantId }).select().single();
+  if (error) throw error; return out;
+}
+export async function updateCompany(sb, id, patch) {
+  const { data: out, error } = await sb.from('crm_company').update({ ...patch, updated_at: new Date().toISOString() }).eq('id', id).select().single();
+  if (error) throw error; return out;
+}
+export async function softDeleteCompany(sb, id) {
+  const { error } = await sb.from('crm_company').update({ deleted_at: new Date().toISOString() }).eq('id', id);
+  if (error) throw error; return true;
+}
+
+// ── CONTACT update / soft-delete ────────────────────────────────────────────
+export async function updateContact(sb, id, patch) {
+  const { data: out, error } = await sb.from('crm_contact').update(patch).eq('id', id).select().single();
+  if (error) throw error; return out;
+}
+export async function softDeleteContact(sb, id) {
+  const { error } = await sb.from('crm_contact').update({ deleted_at: new Date().toISOString() }).eq('id', id);
+  if (error) throw error; return true;
+}
+
+// Traduce errori RLS/permission in messaggi comprensibili (no dettagli SQL).
+export function friendlyError(e) {
+  const m = String((e && (e.message || e.hint || e.code)) || e || '').toLowerCase();
+  if (m.includes('permission denied') || m.includes('row-level security') || m.includes('42501') || m.includes('violates row-level'))
+    return 'Non hai i permessi necessari per questa operazione.';
+  return 'Operazione non riuscita. Riprova.';
 }
 
 export async function createCustomer(sb, tenantId, data) {

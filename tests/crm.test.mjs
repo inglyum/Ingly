@@ -139,3 +139,39 @@ describe('CRM render + RBAC (offline)', (s) => {
     assert(/Modifica cliente/.test(renderForm('SALES', { id: 'c1', name: 'Mario' })), 'form modifica');
   });
 });
+
+describe('CRM company/contact CRUD + errori (mock, offline)', (s) => {
+  function store() {
+    return { crm_company: [{ id: 'co1', tenant_id: 't1', name: 'Blu', deleted_at: null }],
+      crm_contact: [{ id: 'k1', tenant_id: 't1', customer_id: 'c1', name: 'Ref', deleted_at: null }],
+      crm_customer: [], crm_activity: [] };
+  }
+  it(s, 'createCompany forza tenant_id', async () => {
+    const st = store(); const sb = makeMock(st);
+    const out = await CRM.createCompany(sb, 't1', { name: 'Rossa' });
+    assertEq(out.tenant_id, 't1'); assertEq(st.crm_company.length, 2);
+  });
+  it(s, 'updateCompany + softDeleteCompany', async () => {
+    const st = store(); const sb = makeMock(st);
+    const u = await CRM.updateCompany(sb, 'co1', { name: 'Blu2' }); assertEq(u.name, 'Blu2');
+    await CRM.softDeleteCompany(sb, 'co1');
+    assert(st.crm_company.find((x) => x.id === 'co1').deleted_at, 'company non soft-deleted');
+  });
+  it(s, 'listCompanies esclude soft-deleted', async () => {
+    const st = store(); st.crm_company.push({ id: 'co2', tenant_id: 't1', name: 'X', deleted_at: '2026-01-01' });
+    const sb = makeMock(st); const list = await CRM.listCompanies(sb, {});
+    assert(!list.some((c) => c.id === 'co2'), 'soft-deleted incluso');
+  });
+  it(s, 'updateContact + softDeleteContact', async () => {
+    const st = store(); const sb = makeMock(st);
+    await CRM.updateContact(sb, 'k1', { role: 'Buyer' });
+    assertEq(st.crm_contact.find((x) => x.id === 'k1').role, 'Buyer');
+    await CRM.softDeleteContact(sb, 'k1');
+    assert(st.crm_contact.find((x) => x.id === 'k1').deleted_at, 'contact non soft-deleted');
+  });
+  it(s, 'friendlyError traduce permission denied / RLS senza dettagli SQL', async () => {
+    assertEq(CRM.friendlyError({ message: 'new row violates row-level security policy' }), 'Non hai i permessi necessari per questa operazione.');
+    assertEq(CRM.friendlyError({ code: '42501', message: 'permission denied: delete' }), 'Non hai i permessi necessari per questa operazione.');
+    assert(!/SQL|row-level|42501/i.test(CRM.friendlyError({ message: 'boom' })), 'errore generico espone dettagli');
+  });
+});

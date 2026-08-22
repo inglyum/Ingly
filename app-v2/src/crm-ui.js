@@ -21,13 +21,17 @@ export function renderCustomerDetail(bundle, role) {
   const c = bundle.customer;
   if (!c) return `<div class="v2-empty">Cliente non trovato.</div>`;
   const w = CRM.canWrite(role);
+  const d = CRM.canDelete(role);
   const contacts = (bundle.contacts || []).map((k) =>
     `<li>${esc(k.name)}${k.role ? ' · ' + esc(k.role) : ''}${k.email ? ' · ' + esc(k.email) : ''}</li>`).join('') || '<li class="v2-muted">Nessun contatto.</li>';
   const acts = (bundle.activities || []).map((a) =>
     `<li><b>${esc(a.type)}</b> — ${esc(a.body || '')} <span class="v2-muted">${esc((a.occurred_at || '').slice(0, 10))}</span></li>`).join('') || '<li class="v2-muted">Nessuna attività.</li>';
   return `<div class="v2-detail">
     <div class="v2-detail-head"><button class="v2-btn v2-ghost" data-back>← Lista</button>
-      ${w ? `<button class="v2-btn" data-edit="${esc(c.id)}">Modifica</button>` : ''}</div>
+      <div style="display:flex;gap:8px">
+        ${w ? `<button class="v2-btn" data-edit="${esc(c.id)}">Modifica</button>` : ''}
+        ${d ? `<button class="v2-btn v2-danger" data-del="${esc(c.id)}">Elimina</button>` : ''}
+      </div></div>
     <h2>${esc(c.name)} <span class="v2-chip">${esc(c.type)}</span></h2>
     <div class="v2-kv"><div><span>Email</span>${esc(c.email || '—')}</div>
       <div><span>Telefono</span>${esc(c.phone || '—')}</div>
@@ -87,7 +91,7 @@ export function mount(container, { sb, ctx }) {
           <th>Nome</th><th>Email</th><th>Telefono</th><th>Segmento</th><th>Tipo</th><th>Valore</th></tr></thead>
           <tbody>${renderCustomerRows(list)}</tbody></table></div>`;
       wireList();
-    } catch (e) { pane.innerHTML = errorBox('Impossibile caricare i clienti: ' + (e && e.message || e)); }
+    } catch (e) { pane.innerHTML = errorBox(CRM.friendlyError(e)); }
   }
 
   let deb;
@@ -107,9 +111,14 @@ export function mount(container, { sb, ctx }) {
       pane.innerHTML = renderCustomerDetail(bundle, role);
       pane.querySelector('[data-back]').addEventListener('click', showList);
       const ed = pane.querySelector('[data-edit]'); if (ed) ed.addEventListener('click', () => showForm(bundle.customer));
+      const dl = pane.querySelector('[data-del]'); if (dl) dl.addEventListener('click', async () => {
+        if (!window.confirm('Eliminare (soft-delete) questo cliente?')) return;
+        try { await CRM.softDeleteCustomer(sb, id); await showList(); }
+        catch (e) { alert(CRM.friendlyError(e)); }
+      });
       const ac = pane.querySelector('[data-add-contact]'); if (ac) ac.addEventListener('click', () => quickAdd('contact', id));
       const aa = pane.querySelector('[data-add-activity]'); if (aa) aa.addEventListener('click', () => quickAdd('activity', id));
-    } catch (e) { pane.innerHTML = errorBox('Errore scheda: ' + (e && e.message || e)); }
+    } catch (e) { pane.innerHTML = errorBox(CRM.friendlyError(e)); }
   }
 
   function showForm(c) {
@@ -126,7 +135,7 @@ export function mount(container, { sb, ctx }) {
       try {
         if (c && c.id) { await CRM.updateCustomer(sb, c.id, data); await showDetail(c.id); }
         else { const out = await CRM.createCustomer(sb, tenantId, data); await showDetail(out.id); }
-      } catch (e) { msg.textContent = 'Errore: ' + (e && e.message || e); }
+      } catch (e) { msg.textContent = CRM.friendlyError(e); }
     });
   }
 
@@ -137,7 +146,7 @@ export function mount(container, { sb, ctx }) {
       if (kind === 'contact') await CRM.addContact(sb, tenantId, id, { name: val });
       else await CRM.addActivity(sb, tenantId, id, { type: 'note', body: val });
       await showDetail(id);
-    } catch (e) { alert('Errore: ' + (e && e.message || e)); }
+    } catch (e) { alert(CRM.friendlyError(e)); }
   }
 
   showList();
