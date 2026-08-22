@@ -22,7 +22,8 @@ const DEFAULT_EMAIL = (r) => `ingly-rbac-${r.toLowerCase()}@staging.ingly.test`;
 
 // Valori placeholder che NON sono password reali.
 const PLACEHOLDERS = new Set([
-  'INSERISCI_PASSWORD', 'INSERISCI_PASSWORD_OWNER', 'CHANGE_ME', 'CHANGEME',
+  'INSERISCI_PASSWORD', 'INSERISCI_PASSWORD_OWNER', 'INSERISCI_PASSWORD_REALE',
+  'CHANGE_ME', 'CHANGEME', 'LA_TUA_PASSWORD',
   'PASSWORD_OWNER', 'PASSWORD_ADMIN', 'PASSWORD_MANAGER', 'PASSWORD_SALES', 'PASSWORD_VIEWER',
   '<...>', 'password', 'PASSWORD',
 ]);

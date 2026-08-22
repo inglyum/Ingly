@@ -62,20 +62,19 @@ async function login(email, password) {
 
 (async () => {
   const admin = await adminList();
-  console.log('\n[auth users]');
-  for (const r of ROLES) {
-    const e = emailOf(r); const u = e ? admin.get(e.toLowerCase()) : null;
-    console.log(`${r}: email=${e || '—'} exists=${u ? 'yes' : 'no'} id=${u ? u.id : '—'} email confirmed=${u ? (u.email_confirmed_at ? 'yes' : 'no') : '—'}`);
-  }
-
-  console.log('\n[login]');
   const res = {};
+  console.log('\n[per ruolo]');
   for (const r of ROLES) {
     const e = emailOf(r); const p = pwdOf(r);
-    if (!e || !p) { res[r] = false; console.log(`${r} login: FAIL (email/password env mancante)`); continue; }
-    const l = await login(e, p);
-    res[r] = l.ok;
-    console.log(`${r} login: ${l.ok ? 'PASS' : `FAIL (${l.status} ${l.reason})`}`);
+    const u = e ? admin.get(e.toLowerCase()) : null;
+    let login_ok = false, reason = '';
+    if (!e || !p) { reason = 'email/password env mancante'; }
+    else { const l = await login(e, p); login_ok = l.ok; reason = l.ok ? '' : `${l.status} ${l.reason}`; }
+    res[r] = login_ok;
+    console.log(`${r} password env: ${p ? 'PRESENT' : 'MISSING'}`);
+    console.log(`${r} user: ${u ? 'EXISTS' : 'MISSING'}`);
+    console.log(`${r} email confirmed: ${u ? (u.email_confirmed_at ? 'YES' : 'NO') : 'NO'}`);
+    console.log(`${r} login: ${login_ok ? 'PASS' : 'FAIL'}${reason ? ' (' + reason + ')' : ''}\n`);
   }
   const all = ROLES.every((r) => res[r]);
   console.log(`\n${all ? 'TUTTI PASS → puoi eseguire: node tests/live_rbac_staging.mjs'
