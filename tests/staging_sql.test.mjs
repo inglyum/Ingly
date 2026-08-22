@@ -191,3 +191,46 @@ describe('CRM slice — validazione statica', (s) => {
     assert(!crm.includes(PROD_REF) && !crmDown.includes(PROD_REF), 'ref di produzione nella slice CRM');
   });
 });
+
+// ── Staging bootstrap (Fase 12B) ──────────────────────────────────────────
+const BOOT_UP = '20260101000004_staging_bootstrap.sql';
+const BOOT_DOWN = '20260101000004_staging_bootstrap_down.sql';
+const boot = readFileSync(join(MIG, BOOT_UP), 'utf8');
+const bootDown = readFileSync(join(ROLL, BOOT_DOWN), 'utf8');
+
+describe('Staging bootstrap — validazione statica', (s) => {
+  it(s, 'migrazione + down esistono nelle cartelle corrette; down non in migrations/', async () => {
+    assert(existsSync(join(MIG, BOOT_UP)), 'manca bootstrap in migrations/');
+    assert(existsSync(join(ROLL, BOOT_DOWN)), 'manca down in rollback/');
+    assert(!readdirSync(MIG).includes(BOOT_DOWN), 'down bootstrap non deve stare in migrations/');
+  });
+  it(s, 'ordering: 000004 dopo 000003 (crm)', async () => {
+    assert('20260101000004' > '20260101000003', 'ordering bootstrap errato');
+  });
+  it(s, 'PARTE A: policy bootstrap usano auth.uid() (self-read)', async () => {
+    assert(/create policy membership_self[\s\S]*user_id = auth\.uid\(\)/i.test(boot), 'membership_self non usa auth.uid()');
+    assert(/create policy user_role_read[\s\S]*user_id = auth\.uid\(\)/i.test(boot), 'user_role_read non usa auth.uid()');
+  });
+  it(s, 'PARTE B: seed idempotente (guardie no-op + on conflict)', async () => {
+    assert(/from auth\.users where email =/.test(boot), 'lookup utente per email mancante');
+    assert(/if v_uid is null/i.test(boot), 'guardia no-op mancante');
+    assert(/on conflict/i.test(boot), 'insert non idempotenti');
+    assert(/where slug = 'ingly-staging'/.test(boot), 'tenant non idempotente per slug');
+  });
+  it(s, 'usa il ruolo OWNER già seminato (nessun nuovo ruolo/permesso)', async () => {
+    assert(/from public\.role where key = 'OWNER'/.test(boot), 'non usa OWNER seminato');
+    assert(!/insert into public\.role\b/i.test(boot), 'crea nuovi ruoli (vietato)');
+    assert(!/insert into public\.permission\b/i.test(boot), 'crea permessi (vietato)');
+  });
+  it(s, 'down ripristina le policy claim-only e rimuove i dati', async () => {
+    assert(/create policy membership_self[\s\S]*current_tenant_ids\(\)/i.test(bootDown), 'down non ripristina policy');
+    assert(/delete from public\.user_role/i.test(bootDown) && /delete from public\.profile/i.test(bootDown), 'down non rimuove i dati');
+  });
+  it(s, 'nessun ref di PRODUZIONE nel bootstrap', async () => {
+    assert(!boot.includes(PROD_REF) && !bootDown.includes(PROD_REF), 'ref di produzione nel bootstrap');
+  });
+  it(s, 'bilanciamento $$ nei blocchi DO', async () => {
+    assert((boot.match(/\$\$/g) || []).length % 2 === 0, '$$ non bilanciati (up)');
+    assert((bootDown.match(/\$\$/g) || []).length % 2 === 0, '$$ non bilanciati (down)');
+  });
+});
