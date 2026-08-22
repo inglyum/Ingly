@@ -8,5 +8,6 @@ import './app_v2_shell.test.mjs';
 import './crm.test.mjs';
 import './context.test.mjs';
 import './rbac.test.mjs';
+import './dashboard.test.mjs';
 import { run } from './harness.mjs';
 await run();

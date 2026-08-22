@@ -20,17 +20,8 @@ function tabs(id, items, active) {
 
 // ── DASHBOARD ────────────────────────────────────────────────────────────
 function viewDashboard(ctx) {
-  const kpis = [
-    ['Ricavi MTD', '—'], ['Ordini attivi', '—'], ['Preventivi', '—'], ['Margine', '—'],
-  ];
   return `${head({ icon: '📊', n: 'Dashboard ROI' }, 'Panoramica business · tenant ' + esc(ctx.activeTenant || '—'))}
-    <div class="v2-grid">${kpis.map(([l, v]) =>
-      `<div class="v2-kpi"><div class="v2-kpi-l">${l}</div><div class="v2-kpi-v">${v}</div></div>`).join('')}</div>
-    <div class="v2-cols">
-      <div class="v2-card"><h3>Ultime Vendite</h3>${empty('Nessun dato — collega il backend staging per caricare le vendite.')}</div>
-      <div class="v2-card"><h3>Preventivi Recenti</h3>${empty('Nessun preventivo — collega il backend staging.')}</div>
-    </div>
-    <div class="v2-note">I valori si popoleranno da Supabase (staging) quando il modulo Vendite/Preventivi V2 sarà connesso.</div>`;
+    <div data-dash-pane><div class="v2-loading">⏳ Inizializzazione dashboard…</div></div>`;
 }
 
 // ── CRM CLIENTI (live: montato dal router via crm-ui.js) ───────────────────
