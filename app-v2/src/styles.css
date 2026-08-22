@@ -88,3 +88,12 @@ body{ background:var(--bg); color:var(--tx); font:14px/1.5 system-ui,-apple-syst
 .v2-form-actions{ display:flex; gap:8px; justify-content:flex-end; margin-top:14px }
 .v2-form-msg{ margin-top:8px; font-size:12px; color:var(--mut) }
 .v2-danger{ background:#7f1d1d; color:#fecaca; border:1px solid #b91c1c }
+
+/* CRM v14+ — schede, contatti inline, toast */
+.v2-xs{ padding:2px 7px; font-size:11px; line-height:1.2 }
+.v2-li-act{ display:flex; justify-content:space-between; align-items:center; gap:8px }
+.v2-li-btns{ display:inline-flex; gap:4px; flex:0 0 auto }
+.v2-toast{ position:fixed; right:18px; bottom:18px; z-index:50; background:var(--card); color:var(--txt);
+  border:1px solid var(--bd); border-radius:9px; padding:10px 16px; box-shadow:0 8px 24px rgba(0,0,0,.28);
+  animation:v2toast .25s var(--ease-out,ease) }
+@keyframes v2toast{ from{ opacity:0; transform:translateY(8px) } to{ opacity:1; transform:none } }

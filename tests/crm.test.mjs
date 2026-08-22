@@ -3,7 +3,8 @@
 // con tenant forzato, soft-delete, render righe/dettaglio, gate RBAC.
 import { describe, it, assert, assertEq } from './harness.mjs';
 import * as CRM from '../app-v2/src/crm.js';
-import { renderCustomerRows, renderCustomerDetail, renderForm } from '../app-v2/src/crm-ui.js';
+import { renderCustomerRows, renderCustomerDetail, renderForm,
+  renderCompanyRows, renderActivityRows, renderCompanyDetail, renderCompanyForm } from '../app-v2/src/crm-ui.js';
 
 // ── Mock Supabase (test double del subset usato da crm.js) ──────────────────
 function makeMock(store) {
@@ -173,5 +174,45 @@ describe('CRM company/contact CRUD + errori (mock, offline)', (s) => {
     assertEq(CRM.friendlyError({ message: 'new row violates row-level security policy' }), 'Non hai i permessi necessari per questa operazione.');
     assertEq(CRM.friendlyError({ code: '42501', message: 'permission denied: delete' }), 'Non hai i permessi necessari per questa operazione.');
     assert(!/SQL|row-level|42501/i.test(CRM.friendlyError({ message: 'boom' })), 'errore generico espone dettagli');
+  });
+  it(s, 'getCompany restituisce azienda + clienti collegati', async () => {
+    const st = { crm_company: [{ id: 'co1', tenant_id: 't1', name: 'Blu', deleted_at: null }],
+      crm_customer: [{ id: 'x1', tenant_id: 't1', company_id: 'co1', name: 'Cli', type: 'B2B', value_cached: 10, deleted_at: null }],
+      crm_contact: [], crm_activity: [] };
+    const b = await CRM.getCompany(makeMock(st), 'co1');
+    assertEq(b.company.id, 'co1'); assertEq(b.customers.length, 1); assertEq(b.customers[0].id, 'x1');
+  });
+  it(s, 'listActivities filtra per tipo, ordina, esclude nulla', async () => {
+    const st = { crm_activity: [
+      { id: 'a1', tenant_id: 't1', customer_id: 'c1', type: 'note', body: 'x', occurred_at: '2026-01-01' },
+      { id: 'a2', tenant_id: 't1', customer_id: 'c1', type: 'call', body: 'y', occurred_at: '2026-02-01' },
+    ], crm_company: [], crm_customer: [], crm_contact: [] };
+    const all = await CRM.listActivities(makeMock(st), {});
+    assertEq(all.length, 2); assertEq(all[0].id, 'a2'); // desc per occurred_at
+    const calls = await CRM.listActivities(makeMock(st), { type: 'call' });
+    assertEq(calls.length, 1); assertEq(calls[0].id, 'a2');
+  });
+});
+
+describe('CRM render aziende/attività (offline)', (s) => {
+  it(s, 'renderCompanyRows: righe + empty state', async () => {
+    assert(/data-company="co1"/.test(renderCompanyRows([{ id: 'co1', name: 'Blu', vat: 'IT1', tags: ['x'] }])), 'riga azienda');
+    assert(/Nessuna azienda/.test(renderCompanyRows([])), 'empty aziende');
+  });
+  it(s, 'renderActivityRows: lista + empty state', async () => {
+    assert(/chiamare|nota/i.test(renderActivityRows([{ type: 'note', body: 'nota', occurred_at: '2026-01-01' }])), 'attività');
+    assert(/Nessuna attività/.test(renderActivityRows([])), 'empty attività');
+  });
+  it(s, 'renderCompanyDetail: azioni edit/archivia per ruolo', async () => {
+    const b = { company: { id: 'co1', name: 'Blu', vat: 'IT1', tags: [] }, customers: [] };
+    assert(/data-edit-company="co1"/.test(renderCompanyDetail(b, 'SALES')), 'edit per SALES');
+    assert(!/data-del-company/.test(renderCompanyDetail(b, 'SALES')), 'SALES non archivia');
+    assert(/data-del-company/.test(renderCompanyDetail(b, 'MANAGER')), 'MANAGER archivia');
+    assert(!/data-edit-company/.test(renderCompanyDetail(b, 'VIEWER')), 'VIEWER sola lettura');
+  });
+  it(s, 'renderCompanyForm: nuovo vs modifica + tags precompilati', async () => {
+    assert(/Nuova azienda/.test(renderCompanyForm()), 'form nuovo');
+    assert(/Modifica azienda/.test(renderCompanyForm({ id: 'co1', name: 'Blu', tags: ['a', 'b'] })), 'form modifica');
+    assert(/a, b/.test(renderCompanyForm({ id: 'co1', name: 'Blu', tags: ['a', 'b'] })), 'tags precompilati');
   });
 });

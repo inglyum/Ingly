@@ -34,6 +34,13 @@ export async function listCompanies(sb, opts = {}) {
   if (error) throw error;
   return data || [];
 }
+export async function getCompany(sb, id) {
+  const { data: company, error } = await sb.from('crm_company').select('*').eq('id', id).maybeSingle();
+  if (error) throw error;
+  const { data: customers } = await sb.from('crm_customer')
+    .select('id,name,email,type,value_cached').eq('company_id', id).is('deleted_at', null).order('name', { ascending: true });
+  return { company: company || null, customers: customers || [] };
+}
 export async function createCompany(sb, tenantId, data) {
   const { data: out, error } = await sb.from('crm_company').insert({ ...data, tenant_id: tenantId }).select().single();
   if (error) throw error; return out;
@@ -98,6 +105,17 @@ export async function addActivity(sb, tenantId, customerId, data) {
   if (error) throw error;
   return out;
 }
+
+// ── ACTIVITY (log immutabile: create + read; Phase 14 vieta update/delete) ──
+export async function listActivities(sb, opts = {}) {
+  let q = sb.from('crm_activity').select('id,customer_id,type,body,occurred_at');
+  if (opts.type) q = q.eq('type', opts.type);
+  if (opts.customerId) q = q.eq('customer_id', opts.customerId);
+  const { data, error } = await q.order('occurred_at', { ascending: false }).limit(opts.limit || 100);
+  if (error) throw error;
+  return data || [];
+}
+export const ACTIVITY_TYPES = ['note', 'call', 'email', 'meeting', 'followup'];
 
 // RBAC lato UI (il confine reale è la RLS server-side).
 const WRITE_ROLES = ['OWNER', 'ADMIN', 'MANAGER', 'SALES'];
