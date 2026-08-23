@@ -136,6 +136,10 @@ function seed(){
       { id:'inv1', tenant_id:'t1', number:'FATT-2026-000001', customer_id:'c1', customer_name:'Maria Russo', order_id:null, year:2026, status:'ISSUED', issue_date:'2026-08-05', due_date:'2026-09-04', subtotal:100, discount:0, tax:22, total:122, paid_total:0, deleted_at:null },
     ],
     sales_payment:[],
+    supplier:[
+      { id:'sup1', tenant_id:'t1', name:'Legnami Belice Srl', vat:'IT01112223330', email:'ordini@legnamibelice.it', phone:'0918000', active:true, deleted_at:null },
+      { id:'sup2', tenant_id:'t1', name:'Plexi Sud', vat:'IT04445556660', email:'info@plexisud.it', phone:'0957000', active:true, deleted_at:null },
+    ],
     sales_invoice_line:[
       { id:'il1', tenant_id:'t1', invoice_id:'inv1', product_id:'p1', description:'Targa A5 incisa', quantity:2, unit_price:50, discount:0, tax:22, line_total:122, sort_order:0 },
     ],

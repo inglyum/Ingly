@@ -70,7 +70,12 @@ function viewAging() {
     <div data-aging-root><div class="v2-loading">⏳ Inizializzazione scadenziario…</div></div>`;
 }
 
-const SPECIAL = { dashboard: viewDashboard, clients: viewClients, catalog: viewCatalog, quotes: viewQuotes, gestione_ordini: viewOrders, invoices: viewInvoices, aging: viewAging };
+function viewSuppliers() {
+  return `${head({ icon: '\u{1F69A}', n: 'Fornitori' }, 'Anagrafica fornitori \u00b7 ciclo passivo \u00b7 connesso a Supabase')}
+    <div data-suppliers-root><div class="v2-loading">\u23f3 Inizializzazione fornitori\u2026</div></div>`;
+}
+
+const SPECIAL = { dashboard: viewDashboard, clients: viewClients, catalog: viewCatalog, quotes: viewQuotes, gestione_ordini: viewOrders, invoices: viewInvoices, aging: viewAging, suppliers: viewSuppliers };
 
 export function renderView(section, ctx) {
   const fn = SPECIAL[section];
