@@ -7,6 +7,7 @@ import { listOrders } from './orders.js';
 import { listProducts, marginPercent } from './catalog.js';
 import { listMovements, loadInventory } from './warehouse.js';
 import { listInvoices, balanceDue } from './invoices.js';
+import { listShipments } from './logistics.js';
 import { friendlyError } from './crm.js';
 export { friendlyError };
 
@@ -52,12 +53,14 @@ export async function reorderIntelligence(sb, opts = {}) {
 // ── 2) ANOMALY DETECTION ───────────────────────────────────────────────────
 // Anomalie deterministiche: giacenza negativa, margine negativo (prezzo<costo),
 // fatture scadute, ordini a totale 0 (righe mancanti).
-export async function anomalyDetection(sb) {
-  const [inv, products, invoices, orders] = await Promise.all([
+export async function anomalyDetection(sb, opts = {}) {
+  const stuckDays = opts.stuckDays || 5;
+  const [inv, products, invoices, orders, shipments] = await Promise.all([
     safe(loadInventory(sb, {}), { rows: [] }),
     safe(listProducts(sb, { limit: 1000 }), []),
     safe(listInvoices(sb, { limit: 1000 }), []),
     safe(listOrders(sb, { limit: 1000 }), []),
+    safe(listShipments(sb, { limit: 1000 }), []),
   ]);
   const out = [];
   for (const r of inv.rows) if (r.qty < 0) out.push({ severity: 'danger', type: 'Giacenza negativa', entity: r.name, detail: `Giacenza ${r.qty}`, link: 'inventory', source: 'Magazzino → somma movimenti < 0' });
@@ -65,6 +68,11 @@ export async function anomalyDetection(sb) {
   const t = today();
   for (const i of invoices) if (!['DRAFT', 'CANCELLED', 'PAID'].includes(i.status) && i.due_date && i.due_date < t && balanceDue(i) > 0) out.push({ severity: 'danger', type: 'Fattura scaduta', entity: i.number, detail: `Residuo ${r2(balanceDue(i))} · scad. ${i.due_date}`, link: 'aging', source: 'Fatture → oltre scadenza con residuo' });
   for (const o of orders) if (o.status !== 'CANCELLED' && Number(o.total || 0) === 0) out.push({ severity: 'info', type: 'Ordine senza righe', entity: o.number, detail: 'Totale 0', link: 'gestione_ordini', source: 'Ordini → totale = 0' });
+  for (const sh of shipments) {
+    if (['SHIPPED', 'DELIVERED', 'CANCELLED'].includes(sh.status)) continue;
+    const age = daysBetween(t, (sh.created_at || '').slice(0, 10));
+    if (age >= stuckDays) out.push({ severity: 'warn', type: 'Spedizione ferma', entity: sh.number, detail: `${sh.status} da ${age} gg`, link: 'logistics', source: `Logistica → non spedita da ≥ ${stuckDays} gg` });
+  }
   const rank = { danger: 0, warn: 1, info: 2 };
   out.sort((a, b) => rank[a.severity] - rank[b.severity]);
   return { items: out, meta: { source: 'inventory/catalog/invoices/orders' } };

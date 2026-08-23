@@ -43,6 +43,11 @@ function seed() {
     sales_order_line: [{ order_id: 'o1', product_id: 'p1', quantity: 15 }],
     sales_invoice: [{ id: 'i1', tenant_id: 't1', number: 'F1', customer_name: 'Maria', status: 'ISSUED', total: 100, paid_total: 0, due_date: iso(30), deleted_at: null }],
     sales_payment: [], purchase_order: [], supplier_payment: [],
+    shipment: [
+      { id: 'sh1', tenant_id: 't1', number: 'SPED-1', customer_name: 'Nino', status: 'PREPARING', created_at: iso(9), deleted_at: null }, // ferma da 9 gg
+      { id: 'sh2', tenant_id: 't1', number: 'SPED-2', customer_name: 'Maria', status: 'PREPARING', created_at: iso(1), deleted_at: null }, // recente → ok
+      { id: 'sh3', tenant_id: 't1', number: 'SPED-3', customer_name: 'Maria', status: 'DELIVERED', created_at: iso(20), deleted_at: null }, // conclusa → ok
+    ],
     crm_customer: [{ id: 'c1', tenant_id: 't1', name: 'Maria', deleted_at: null }],
   };
 }
@@ -58,6 +63,8 @@ describe('Intelligence — motori deterministici', (s) => {
     const d = await INT.anomalyDetection(makeMock(seed()));
     assert(d.items.some((a) => /Margine negativo/.test(a.type) && a.entity === 'Sottocosto'), 'margine negativo');
     assert(d.items.some((a) => /Ordine senza righe/.test(a.type)), 'ordine totale 0');
+    assert(d.items.some((a) => /Spedizione ferma/.test(a.type) && a.entity === 'SPED-1'), 'spedizione ferma da 9 gg');
+    assert(!d.items.some((a) => a.entity === 'SPED-2' || a.entity === 'SPED-3'), 'spedizioni recenti/concluse non anomale');
     assert(d.items.every((a) => a.source), 'fonte mancante');
   });
   it(s, 'customerRFM: segmenta i clienti con motivazione', async () => {
