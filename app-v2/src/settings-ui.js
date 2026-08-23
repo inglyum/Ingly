@@ -39,6 +39,16 @@ export function renderForm(s, editable) {
       ${num('markup_b2b', 'Markup B2B', s.markup_b2b, ro)}
       ${num('markup_etsy', 'Markup Etsy', s.markup_etsy, ro)}
     </div></div>
+    <div class="v2-card"><h3>Fattura elettronica (cedente)</h3><div class="v2-form-grid">
+      ${txt('fiscal_code', 'Codice Fiscale', s.fiscal_code, ro)}
+      ${txt('tax_regime', 'Regime fiscale (es. RF01/RF19)', s.tax_regime, ro)}
+      ${txt('sede_cap', 'CAP sede', s.sede_cap, ro)}
+      ${txt('sede_comune', 'Comune sede', s.sede_comune, ro)}
+      ${txt('sede_provincia', 'Provincia (sigla)', s.sede_provincia, ro)}
+      ${txt('sede_nazione', 'Nazione', s.sede_nazione, ro)}
+      ${txt('rea_office', 'Ufficio REA', s.rea_office, ro)}
+      ${txt('rea_number', 'Numero REA', s.rea_number, ro)}
+    </div></div>
     <div class="v2-card"><h3>Numerazione (prefissi)</h3><div class="v2-form-grid">
       ${txt('quote_prefix', 'Preventivi', s.quote_prefix, ro)}
       ${txt('order_prefix', 'Ordini', s.order_prefix, ro)}

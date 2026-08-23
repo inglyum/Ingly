@@ -15,12 +15,17 @@ export const DEFAULTS = {
   labor_rate: 18, sfrido_pct: 15, markup_b2c: 3, markup_b2b: 2.5, markup_etsy: 3.5,
   quote_prefix: 'PREV', order_prefix: 'ORD', invoice_prefix: 'FATT',
   cash_tax_pct: 15, cash_reserve_pct: 10, cash_goals_pct: 15, cash_operational_pct: 60,
+  // Fattura elettronica / SDI (cedente) — vuoti finché compilati dall'utente
+  fiscal_code: '', tax_regime: '', rea_office: '', rea_number: '',
+  sede_cap: '', sede_comune: '', sede_provincia: '', sede_nazione: 'IT',
 };
 
 const NUMERIC = new Set(['default_vat_rate', 'labor_rate', 'sfrido_pct', 'markup_b2c', 'markup_b2b', 'markup_etsy',
   'cash_tax_pct', 'cash_reserve_pct', 'cash_goals_pct', 'cash_operational_pct']);
 const TEXT = new Set(['company_name', 'vat_number', 'address', 'city', 'email', 'phone',
-  'quote_prefix', 'order_prefix', 'invoice_prefix']);
+  'quote_prefix', 'order_prefix', 'invoice_prefix',
+  'fiscal_code', 'tax_regime', 'rea_office', 'rea_number',
+  'sede_cap', 'sede_comune', 'sede_provincia', 'sede_nazione']);
 const EDITABLE = [...NUMERIC, ...TEXT];
 
 // La somma delle percentuali cassa dovrebbe fare 100 (KB 15/10/15/60).

@@ -4,6 +4,7 @@
 import * as INV from './invoices.js';
 import * as CRM from './crm.js';
 import * as PAY from './payments.js';
+import { openSdiDrawer } from './sdi-ui.js';
 import { roleForTenant } from './context.js';
 
 const esc = (s) => String(s == null ? '' : s).replace(/[&<>"']/g, (c) => (
@@ -35,6 +36,7 @@ export function renderInvoiceDetail(bundle, role) {
   return `<div class="v2-detail">
     <div class="v2-detail-head"><button class="v2-btn v2-ghost" data-back>← Lista</button>
       <div style="display:flex;gap:8px;flex-wrap:wrap">
+        <button class="v2-btn" data-sdi="${esc(i.id)}">🧾 XML SDI</button>
         ${d ? `<button class="v2-btn v2-danger" data-del="${esc(i.id)}">Archivia</button>` : ''}
       </div></div>
     <h2>${esc(i.number || 'Fattura')} <span class="v2-chip">${esc(SL[i.status] || i.status)}</span></h2>
@@ -121,6 +123,7 @@ export function mount(container, { sb, ctx }) {
       const payments = await PAY.listPayments(sb, id).catch(() => []);
       pane.innerHTML = renderInvoiceDetail(bundle, role) + renderPayments(payments, bundle.invoice, role);
       pane.querySelector('[data-back]').addEventListener('click', list);
+      const sd = pane.querySelector('[data-sdi]'); if (sd) sd.addEventListener('click', () => openSdiDrawer({ sb, tenantId: (ctx || {}).activeTenant || null, invoiceId: id }));
       const dl = pane.querySelector('[data-del]'); if (dl) dl.addEventListener('click', async () => {
         if (!window.confirm('Archiviare questa fattura?')) return;
         try { await INV.softDeleteInvoice(sb, id); toast(root, 'Archiviata'); list(); }
