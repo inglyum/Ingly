@@ -80,7 +80,12 @@ function viewPurchases() {
     <div data-purchases-root><div class="v2-loading">\u23f3 Inizializzazione acquisti\u2026</div></div>`;
 }
 
-const SPECIAL = { dashboard: viewDashboard, clients: viewClients, catalog: viewCatalog, quotes: viewQuotes, gestione_ordini: viewOrders, invoices: viewInvoices, aging: viewAging, suppliers: viewSuppliers, purchases: viewPurchases };
+function viewWarehouse() {
+  return `${head({ icon: '\u{1F5C4}', n: 'Magazzino' }, 'Giacenze \u00b7 movimenti \u00b7 valore stock \u00b7 connesso a Supabase')}
+    <div data-warehouse-root><div class="v2-loading">\u23f3 Inizializzazione magazzino\u2026</div></div>`;
+}
+
+const SPECIAL = { dashboard: viewDashboard, clients: viewClients, catalog: viewCatalog, quotes: viewQuotes, gestione_ordini: viewOrders, invoices: viewInvoices, aging: viewAging, suppliers: viewSuppliers, purchases: viewPurchases, inventory: viewWarehouse };
 
 export function renderView(section, ctx) {
   const fn = SPECIAL[section];

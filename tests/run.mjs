@@ -17,5 +17,6 @@ import './payments.test.mjs';
 import './aging.test.mjs';
 import './suppliers.test.mjs';
 import './purchases.test.mjs';
+import './warehouse.test.mjs';
 import { run } from './harness.mjs';
 await run();
