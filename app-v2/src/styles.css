@@ -222,3 +222,15 @@ body{ background:var(--bg); color:var(--tx); font:14px/1.5 system-ui,-apple-syst
 /* Commesse — barra avanzamento */
 .prj-bar{ height:8px; background:var(--card2); border-radius:99px; overflow:hidden; margin:6px 0 12px }
 .prj-bar-fill{ height:100%; background:linear-gradient(90deg,var(--pri),var(--pri2)); border-radius:99px; transition:width .3s }
+
+/* Reporting/BI */
+.rep-h{ margin:20px 0 6px; font-size:13px; text-transform:uppercase; letter-spacing:.5px; color:var(--mut) }
+.rep-alerts{ display:flex; flex-direction:column; gap:8px }
+.rep-alert{ padding:10px 14px; border-radius:10px; border:1px solid var(--bd); background:var(--card); font-size:13px }
+.rep-alert-danger{ border-color:#7f1d1d; background:#2a0f0f }
+.rep-alert-warn{ border-color:#78350f; background:#241605 }
+.rep-alert-info{ border-color:var(--bd) }
+.rep-bar-row{ display:grid; grid-template-columns:140px 1fr auto; align-items:center; gap:10px }
+.rep-bar-name{ overflow:hidden; text-overflow:ellipsis; white-space:nowrap; font-size:12.5px }
+.rep-bar-track{ height:8px; background:var(--card2); border-radius:99px; overflow:hidden }
+.rep-bar-fill{ height:100%; background:linear-gradient(90deg,var(--pri),var(--pri2)); border-radius:99px }

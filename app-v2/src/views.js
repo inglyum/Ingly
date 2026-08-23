@@ -95,7 +95,12 @@ function viewFinance() {
     <div data-finance-root><div class="v2-loading">\u23f3 Inizializzazione finanza\u2026</div></div>`;
 }
 
-const SPECIAL = { dashboard: viewDashboard, clients: viewClients, catalog: viewCatalog, quotes: viewQuotes, gestione_ordini: viewOrders, invoices: viewInvoices, aging: viewAging, suppliers: viewSuppliers, purchases: viewPurchases, inventory: viewWarehouse, projects: viewProjects, finance: viewFinance };
+function viewReports() {
+  return `${head({ icon: '\u{1F4C8}', n: 'Reporting & BI' }, 'Cruscotto direzionale \u00b7 vendite/finanza/magazzino/commesse \u00b7 dati reali')}
+    <div data-reports-root><div class="v2-loading">\u23f3 Elaboro i report\u2026</div></div>`;
+}
+
+const SPECIAL = { dashboard: viewDashboard, clients: viewClients, catalog: viewCatalog, quotes: viewQuotes, gestione_ordini: viewOrders, invoices: viewInvoices, aging: viewAging, suppliers: viewSuppliers, purchases: viewPurchases, inventory: viewWarehouse, projects: viewProjects, finance: viewFinance, analytics: viewReports };
 
 export function renderView(section, ctx) {
   const fn = SPECIAL[section];
