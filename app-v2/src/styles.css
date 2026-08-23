@@ -151,6 +151,11 @@ body{ background:var(--bg); color:var(--tx); font:14px/1.5 system-ui,-apple-syst
 .v2-ok{ color:var(--green,#16a34a) }
 .v2-bad{ color:var(--red,#dc2626) }
 
+/* Impostazioni — nota informativa */
+.v2-note{ padding:10px 12px; border:1px solid var(--border,#2a2a2a); border-left:3px solid var(--pri);
+  border-radius:8px; background:var(--bg-card-2,#1e1e1e); font-size:13px; color:var(--txt-dim,#9a9a9a); margin-bottom:12px }
+.v2-note b{ color:var(--txt,#eee) }
+
 /* ===== CATALOGO PREMIUM v1 ===== */
 .btn{ display:inline-flex; align-items:center; gap:6px; padding:9px 15px; border:1px solid transparent; border-radius:9px;
   background:var(--pri); color:#111; font-weight:650; font-size:13px; cursor:pointer; transition:filter .15s, transform .05s; font-family:inherit }

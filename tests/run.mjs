@@ -26,5 +26,6 @@ import './production.test.mjs';
 import './logistics.test.mjs';
 import './search.test.mjs';
 import './quoter.test.mjs';
+import './settings.test.mjs';
 import { run } from './harness.mjs';
 await run();
