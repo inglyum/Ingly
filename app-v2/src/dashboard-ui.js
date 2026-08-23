@@ -36,6 +36,7 @@ export function renderDashboard(d) {
       <div class="v2-kpi"><div class="v2-kpi-l">Fatturato</div><div class="v2-kpi-v">${eur(d.invoicedTotal || 0)}</div></div>
       <div class="v2-kpi"><div class="v2-kpi-l">Incassato</div><div class="v2-kpi-v">${eur(d.collectedTotal || 0)}</div></div>
       <div class="v2-kpi"><div class="v2-kpi-l">Da incassare</div><div class="v2-kpi-v">${eur(d.outstandingTotal || 0)}</div></div>
+      <div class="v2-kpi"><div class="v2-kpi-l">Scaduto</div><div class="v2-kpi-v">${eur(d.overdueTotal || 0)}</div></div>
     </div>
     <div class="v2-cols" style="margin-top:14px">
       <div class="v2-card"><h3>Ultimi clienti</h3><ul class="v2-list">${recent}</ul></div>

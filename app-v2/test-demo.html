@@ -44,6 +44,14 @@ function makeMock(store){
       row.issue_date=row.issue_date||now().slice(0,10); if(!row.due_date){ const d=new Date(); d.setDate(d.getDate()+30); row.due_date=d.toISOString().slice(0,10); } }
     if(table.endsWith('_line')){ row.line_total=r2(row.quantity*row.unit_price-(row.discount||0)+(row.tax||0)); }
   }
+  function applyPayments(invId){ const inv=(store.sales_invoice||[]).find(i=>i.id===invId); if(!inv)return;
+    const paid=r2((store.sales_payment||[]).filter(p=>p.invoice_id===invId&&p.deleted_at==null).reduce((s,p)=>s+p.amount,0));
+    inv.paid_total=paid; if(!['CANCELLED','DRAFT'].includes(inv.status)){ const today=now().slice(0,10);
+      if(paid>=inv.total&&inv.total>0)inv.status='PAID'; else if(paid>0)inv.status='PARTIALLY_PAID';
+      else if(inv.due_date&&inv.due_date<today)inv.status='OVERDUE'; else inv.status='ISSUED'; } }
+  function validatePay(row){ if(row.deleted_at!=null)return; const inv=(store.sales_invoice||[]).find(i=>i.id===row.invoice_id);
+    const total=inv?inv.total:0; const paid=(store.sales_payment||[]).filter(p=>p.invoice_id===row.invoice_id&&p.deleted_at==null).reduce((s,p)=>s+p.amount,0);
+    if(!row.allow_overpayment&&row.amount>(total-paid)+0.001){ const e=new Error('superiore al residuo'); e.code='23514'; throw e; } }
   function builder(table){
     const st = { table, filters:[], op:'select', payload:null, orderBy:null, asc:true, lim:null };
     const api = {
@@ -65,10 +73,14 @@ function makeMock(store){
   }
   function run(st,mode){
     const arr = store[st.table] || (store[st.table]=[]);
-    if(st.op==='insert'){ const row={ id:'id'+(++uid), created_at:now(), ...st.payload }; onInsert(st.table,row); arr.push(row);
-      if(HDR[st.table]){ const [h,fk]=HDR[st.table]; recalc(st.table,h,fk,row[fk]); } return { data:row, error:null }; }
+    if(st.op==='insert'){ const row={ id:'id'+(++uid), created_at:now(), deleted_at:(st.table==='sales_payment'?null:undefined), ...st.payload }; onInsert(st.table,row);
+      if(st.table==='sales_payment'){ try{ validatePay(row); }catch(e){ return { data:null, error:{message:e.message,code:e.code} }; } }
+      arr.push(row);
+      if(HDR[st.table]){ const [h,fk]=HDR[st.table]; recalc(st.table,h,fk,row[fk]); }
+      if(st.table==='sales_payment') applyPayments(row.invoice_id); return { data:row, error:null }; }
     if(st.op==='update'){ let rows=arr.filter(r=>st.filters.every(f=>f(r))); rows.forEach(r=>Object.assign(r,st.payload));
-      if(HDR[st.table]){ const [h,fk]=HDR[st.table]; rows.forEach(r=>{ r.line_total=r2(r.quantity*r.unit_price-(r.discount||0)+(r.tax||0)); recalc(st.table,h,fk,r[fk]); }); } return { data:rows[0]||null, error:null }; }
+      if(HDR[st.table]){ const [h,fk]=HDR[st.table]; rows.forEach(r=>{ r.line_total=r2(r.quantity*r.unit_price-(r.discount||0)+(r.tax||0)); recalc(st.table,h,fk,r[fk]); }); }
+      if(st.table==='sales_payment') rows.forEach(r=>applyPayments(r.invoice_id)); return { data:rows[0]||null, error:null }; }
     if(st.op==='delete'){ const rem=arr.filter(r=>st.filters.every(f=>f(r))); rem.forEach(r=>arr.splice(arr.indexOf(r),1));
       if(HDR[st.table]){ const [h,fk]=HDR[st.table]; rem.forEach(r=>recalc(st.table,h,fk,r[fk])); } return { data:null, error:null }; }
     let rows=arr.filter(r=>st.filters.every(f=>f(r)));
@@ -121,8 +133,9 @@ function seed(){
       { id:'ol1', tenant_id:'t1', order_id:'o1', product_id:'p2', description:'QR Menu ristorante', quantity:1, unit_price:19.90, discount:0, tax:0, line_total:19.90, sort_order:0 },
     ],
     sales_invoice:[
-      { id:'inv1', tenant_id:'t1', number:'FATT-2026-000001', customer_id:'c1', customer_name:'Maria Russo', order_id:null, year:2026, status:'PARTIALLY_PAID', issue_date:'2026-08-05', due_date:'2026-09-04', subtotal:100, discount:0, tax:22, total:122, paid_total:50, deleted_at:null },
+      { id:'inv1', tenant_id:'t1', number:'FATT-2026-000001', customer_id:'c1', customer_name:'Maria Russo', order_id:null, year:2026, status:'ISSUED', issue_date:'2026-08-05', due_date:'2026-09-04', subtotal:100, discount:0, tax:22, total:122, paid_total:0, deleted_at:null },
     ],
+    sales_payment:[],
     sales_invoice_line:[
       { id:'il1', tenant_id:'t1', invoice_id:'inv1', product_id:'p1', description:'Targa A5 incisa', quantity:2, unit_price:50, discount:0, tax:22, line_total:122, sort_order:0 },
     ],

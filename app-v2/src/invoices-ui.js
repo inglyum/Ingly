@@ -3,6 +3,7 @@
 // via conversione da ordine.
 import * as INV from './invoices.js';
 import * as CRM from './crm.js';
+import * as PAY from './payments.js';
 import { roleForTenant } from './context.js';
 
 const esc = (s) => String(s == null ? '' : s).replace(/[&<>"']/g, (c) => (
@@ -56,6 +57,28 @@ export function renderInvoiceDetail(bundle, role) {
     </div></div>`;
 }
 
+export function renderPayments(payments, invoice, role) {
+  const w = CRM.canWrite(role); const d = CRM.canDelete(role);
+  const residuo = INV.balanceDue(invoice);
+  const rows = (payments || []).map((p) => `<li class="v2-li-act">
+    <span><b>${eur(p.amount)}</b> · ${esc(PAY.METHOD_LABEL[p.method] || p.method)} · <span class="v2-muted">${day(p.paid_date)}</span>${p.reference ? ' · ' + esc(p.reference) : ''}</span>
+    ${d ? `<span class="v2-li-btns"><button class="v2-btn v2-xs v2-danger" data-void-pay="${esc(p.id)}">storna</button></span>` : ''}</li>`).join('')
+    || '<li class="v2-muted">Nessun incasso registrato.</li>';
+  const form = (w && residuo > 0 && invoice.status !== 'CANCELLED' && invoice.status !== 'DRAFT') ? `
+    <form class="v2-form" data-pay-form>
+      <div class="v2-form-row">
+        <label>Importo €<input name="amount" type="number" step="0.01" value="${residuo}" required></label>
+        <label>Data<input name="paid_date" type="date"></label></div>
+      <div class="v2-form-row">
+        <label>Metodo<select name="method">${PAY.PAYMENT_METHODS.map((m) => `<option value="${m}">${PAY.METHOD_LABEL[m]}</option>`).join('')}</select></label>
+        <label>Riferimento<input name="reference"></label></div>
+      <label class="v2-chk"><input type="checkbox" name="allow_overpayment"> Consenti incasso &gt; residuo</label>
+      <div class="v2-form-actions"><button type="submit" class="v2-btn">Registra incasso</button></div>
+      <div class="v2-form-msg" data-pay-msg></div>
+    </form>` : (residuo <= 0 ? '<div class="v2-muted">Fattura saldata.</div>' : '');
+  return `<div class="v2-card"><h3>Incassi</h3><ul class="v2-list">${rows}</ul>${form}</div>`;
+}
+
 const loading = (m) => `<div class="v2-loading">⏳ ${esc(m || 'Caricamento…')}</div>`;
 const errorBox = (m) => `<div class="v2-errbox">⚠️ ${esc(m || 'Errore')}</div>`;
 const toast = (root, msg) => { const t = document.createElement('div'); t.className = 'v2-toast'; t.textContent = msg; root.appendChild(t); setTimeout(() => t.remove(), 2600); };
@@ -63,6 +86,7 @@ const toast = (root, msg) => { const t = document.createElement('div'); t.classN
 export function mount(container, { sb, ctx }) {
   if (!container) return;
   const role = roleForTenant(ctx || {}, (ctx || {}).activeTenant) || '—';
+  const tenantId = (ctx || {}).activeTenant || null;
   const w = CRM.canWrite(role);
   const root = container.querySelector('[data-invoices-root]') || container;
   root.innerHTML = `<div data-i-pane></div>`;
@@ -94,7 +118,8 @@ export function mount(container, { sb, ctx }) {
     pane.innerHTML = loading('Carico fattura…');
     try {
       const bundle = await INV.getInvoice(sb, id);
-      pane.innerHTML = renderInvoiceDetail(bundle, role);
+      const payments = await PAY.listPayments(sb, id).catch(() => []);
+      pane.innerHTML = renderInvoiceDetail(bundle, role) + renderPayments(payments, bundle.invoice, role);
       pane.querySelector('[data-back]').addEventListener('click', list);
       const dl = pane.querySelector('[data-del]'); if (dl) dl.addEventListener('click', async () => {
         if (!window.confirm('Archiviare questa fattura?')) return;
@@ -105,6 +130,20 @@ export function mount(container, { sb, ctx }) {
         try { await INV.changeStatus(sb, id, st.value); toast(root, 'Stato aggiornato'); detail(id); }
         catch (e) { alert(INV.friendlyError(e)); }
       });
+      const pf = pane.querySelector('[data-pay-form]'); if (pf) pf.addEventListener('submit', async (ev) => {
+        ev.preventDefault();
+        const msg = pf.querySelector('[data-pay-msg]');
+        const data = Object.fromEntries(new FormData(pf).entries());
+        data.allow_overpayment = pf.querySelector('[name="allow_overpayment"]').checked;
+        msg.textContent = 'Registrazione…';
+        try { await PAY.registerPayment(sb, tenantId, id, data, INV.balanceDue(bundle.invoice)); toast(root, 'Incasso registrato'); detail(id); }
+        catch (e) { msg.textContent = PAY.friendlyPaymentError(e); }
+      });
+      pane.querySelectorAll('[data-void-pay]').forEach((b) => b.addEventListener('click', async () => {
+        if (!window.confirm('Stornare questo incasso?')) return;
+        try { await PAY.voidPayment(sb, b.getAttribute('data-void-pay')); toast(root, 'Incasso stornato'); detail(id); }
+        catch (e) { alert(PAY.friendlyPaymentError(e)); }
+      }));
     } catch (e) { pane.innerHTML = errorBox(INV.friendlyError(e)); }
   }
 

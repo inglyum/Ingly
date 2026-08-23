@@ -14,7 +14,7 @@ export async function loadDashboard(sb) {
     totalValue: 0, recentCustomers: [], recentActivities: [], error: null,
     quotesTotal: 0, quotesDraft: 0, quotesSent: 0, quotesAccepted: 0, quotesAcceptedValue: 0,
     ordersTotal: 0, ordersOpen: 0, ordersDelivered: 0, ordersRevenue: 0,
-    invoicesTotal: 0, invoicesUnpaid: 0, invoicedTotal: 0, collectedTotal: 0, outstandingTotal: 0,
+    invoicesTotal: 0, invoicesUnpaid: 0, invoicedTotal: 0, collectedTotal: 0, outstandingTotal: 0, overdueTotal: 0,
   };
   try {
     const [customers, companies, activities, products, quotes, orders, invoices] = await Promise.all([
@@ -46,6 +46,9 @@ export async function loadDashboard(sb) {
     out.invoicedTotal = activeInv.reduce((s, i) => s + Number(i.total || 0), 0);
     out.collectedTotal = activeInv.reduce((s, i) => s + Number(i.paid_total || 0), 0);
     out.outstandingTotal = activeInv.reduce((s, i) => s + Math.max(0, balanceDue(i)), 0);
+    const today = new Date().toISOString().slice(0, 10);
+    out.overdueTotal = activeInv.filter((i) => i.status !== 'PAID' && i.due_date && i.due_date < today)
+      .reduce((s, i) => s + Math.max(0, balanceDue(i)), 0);
     out.b2b = customers.filter((c) => c.type === 'B2B').length;
     out.b2c = customers.filter((c) => c.type !== 'B2B').length;
     out.totalValue = customers.reduce((s, c) => s + Number(c.value_cached || 0), 0);
