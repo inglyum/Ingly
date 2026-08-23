@@ -110,6 +110,11 @@ function viewProduction() {
     <div data-production-root><div class="v2-loading">\u23f3 Inizializzazione produzione\u2026</div></div>`;
 }
 
+function viewQuoter() {
+  return `${head({ icon: '📄', n: 'Smart Quoter' }, 'Preventivazione parametrica · formula KB · Materiale+Macchina+Lavoro+Design × Markup')}
+    <div data-quoter-root><div class="v2-loading">⏳ Inizializzazione preventivatore…</div></div>`;
+}
+
 function viewSearch() {
   return `${head({ icon: '🔍', n: 'Ricerca Globale' }, 'Cerca in tutti i moduli · clienti · prodotti · documenti · connesso a Supabase')}
     <div data-search-root><div class="v2-empty">Digita per cercare…</div></div>`;
@@ -120,7 +125,7 @@ function viewLogistics() {
     <div data-logistics-root><div class="v2-loading">⏳ Inizializzazione logistica…</div></div>`;
 }
 
-const SPECIAL = { dashboard: viewDashboard, search: viewSearch, clients: viewClients, catalog: viewCatalog, quotes: viewQuotes, gestione_ordini: viewOrders, invoices: viewInvoices, aging: viewAging, suppliers: viewSuppliers, purchases: viewPurchases, inventory: viewWarehouse, projects: viewProjects, finance: viewFinance, analytics: viewReports, intel: viewIntel, production: viewProduction, logistics: viewLogistics };
+const SPECIAL = { dashboard: viewDashboard, search: viewSearch, quoter: viewQuoter, clients: viewClients, catalog: viewCatalog, quotes: viewQuotes, gestione_ordini: viewOrders, invoices: viewInvoices, aging: viewAging, suppliers: viewSuppliers, purchases: viewPurchases, inventory: viewWarehouse, projects: viewProjects, finance: viewFinance, analytics: viewReports, intel: viewIntel, production: viewProduction, logistics: viewLogistics };
 
 export function renderView(section, ctx) {
   const fn = SPECIAL[section];

@@ -138,6 +138,19 @@ body{ background:var(--bg); color:var(--tx); font:14px/1.5 system-ui,-apple-syst
 .v2-search-item-l{ font-weight:600; font-size:13px }
 .v2-search-item-s{ font-size:12px; color:var(--txt-dim,#8a8a8a) }
 
+/* Smart Quoter */
+.v2-quoter{ align-items:start }
+.v2-form-grid{ display:grid; grid-template-columns:repeat(auto-fill,minmax(150px,1fr)); gap:10px }
+.v2-form-grid label{ display:flex; flex-direction:column; gap:4px; font-size:12px; color:var(--txt-dim,#8a8a8a) }
+.v2-form-grid input, .v2-form-grid select{ padding:8px 10px; border:1px solid var(--border,#2a2a2a); border-radius:8px;
+  background:var(--bg-card-2,#1e1e1e); color:var(--txt,#eee); font-family:inherit; font-size:13px }
+.v2-form-grid input:focus-visible, .v2-form-grid select:focus-visible{ outline:2px solid var(--pri); outline-offset:1px }
+.v2-checks{ display:flex; flex-wrap:wrap; gap:14px; margin-top:12px; font-size:13px }
+.v2-checks label{ display:flex; align-items:center; gap:6px; cursor:pointer }
+.v2-hr{ border:none; border-top:1px solid var(--border,#2a2a2a); margin:16px 0 }
+.v2-ok{ color:var(--green,#16a34a) }
+.v2-bad{ color:var(--red,#dc2626) }
+
 /* ===== CATALOGO PREMIUM v1 ===== */
 .btn{ display:inline-flex; align-items:center; gap:6px; padding:9px 15px; border:1px solid transparent; border-radius:9px;
   background:var(--pri); color:#111; font-weight:650; font-size:13px; cursor:pointer; transition:filter .15s, transform .05s; font-family:inherit }
