@@ -22,5 +22,6 @@ import './projects.test.mjs';
 import './finance.test.mjs';
 import './reports.test.mjs';
 import './intelligence.test.mjs';
+import './production.test.mjs';
 import { run } from './harness.mjs';
 await run();

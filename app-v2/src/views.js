@@ -105,7 +105,12 @@ function viewIntel() {
     <div data-intel-root><div class="v2-loading">\u23f3 Elaboro gli insight\u2026</div></div>`;
 }
 
-const SPECIAL = { dashboard: viewDashboard, clients: viewClients, catalog: viewCatalog, quotes: viewQuotes, gestione_ordini: viewOrders, invoices: viewInvoices, aging: viewAging, suppliers: viewSuppliers, purchases: viewPurchases, inventory: viewWarehouse, projects: viewProjects, finance: viewFinance, analytics: viewReports, intel: viewIntel };
+function viewProduction() {
+  return `${head({ icon: '\u{1F3ED}', n: 'Produzione' }, 'Ordini di produzione \u00b7 distinte base \u00b7 consumo materiali \u00b7 connesso a Supabase')}
+    <div data-production-root><div class="v2-loading">\u23f3 Inizializzazione produzione\u2026</div></div>`;
+}
+
+const SPECIAL = { dashboard: viewDashboard, clients: viewClients, catalog: viewCatalog, quotes: viewQuotes, gestione_ordini: viewOrders, invoices: viewInvoices, aging: viewAging, suppliers: viewSuppliers, purchases: viewPurchases, inventory: viewWarehouse, projects: viewProjects, finance: viewFinance, analytics: viewReports, intel: viewIntel, production: viewProduction };
 
 export function renderView(section, ctx) {
   const fn = SPECIAL[section];

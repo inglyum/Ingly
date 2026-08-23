@@ -34,6 +34,7 @@ export const MODULES = [
   {"s":"leadscorer","n":"Lead Scorer","icon":"⭐","group":"Clienti"},
   {"s":"b2bpitch","n":"B2B Pitch Builder","icon":"🤝","group":"Clienti"},
   {"s":"gestione_ordini","n":"Ordini & Workflow","icon":"📦","group":"Produzione"},
+  {"s":"production","n":"Produzione","icon":"🏭","group":"Produzione"},
   {"s":"workflow_dashboard","n":"Workflow Overview","icon":"⚡","group":"Produzione"},
   {"s":"timetracker","n":"Time Tracker","icon":"⏱️","group":"Produzione"},
   {"s":"booking","n":"Booking","icon":"📅","group":"Produzione"},
