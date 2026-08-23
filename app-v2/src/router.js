@@ -20,6 +20,7 @@ import { mount as mountLogistics } from './logistics-ui.js';
 import { mount as mountSearch } from './search-ui.js';
 import { mount as mountQuoter } from './quoter-ui.js';
 import { mount as mountSettings } from './settings-ui.js';
+import { mount as mountProfitFirst } from './profitfirst-ui.js';
 
 export function currentRoute() {
   const h = (typeof location !== 'undefined' && location.hash || '').replace(/^#\/?/, '');
@@ -52,6 +53,7 @@ export function mountRouter(root, ctx, sb) {
     if (r === 'search' && sb) { try { mountSearch(view, { sb }); } catch (_) {} }
     if (r === 'quoter' && sb) { try { mountQuoter(view, { sb, ctx }); } catch (_) {} }
     if (r === 'settings' && sb) { try { mountSettings(view, { sb, ctx }); } catch (_) {} }
+    if (r === 'cashflow' && sb) { try { mountProfitFirst(view, { sb, ctx }); } catch (_) {} }
     root.querySelectorAll('[data-route]').forEach((b) =>
       b.classList.toggle('active', b.getAttribute('data-route') === r));
     const crumb = root.querySelector('#v2-crumb');

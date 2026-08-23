@@ -28,5 +28,6 @@ import './search.test.mjs';
 import './quoter.test.mjs';
 import './quoter-integration.test.mjs';
 import './settings.test.mjs';
+import './profitfirst.test.mjs';
 import { run } from './harness.mjs';
 await run();

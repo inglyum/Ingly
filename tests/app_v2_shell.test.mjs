@@ -108,7 +108,7 @@ describe('V2 Routing / rendering moduli (offline)', (s) => {
     assert(/data-catalog-root/.test(renderView('catalog', ctx)), 'Catalogo senza root live');
   });
   it(s, 'i moduli non implementati sono marcati "non ancora connesso" (nessun controllo finto)', async () => {
-    const html = renderView('cashflow', ctx); // modulo reale non ancora implementato
+    const html = renderView('goals', ctx); // modulo reale non ancora implementato
     assert(/non ancora connesso a V2/i.test(html), 'manca badge non-connesso');
   });
   it(s, 'i moduli non ancora connessi mostrano il badge (nessun controllo finto)', async () => {
