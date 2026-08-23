@@ -117,18 +117,43 @@ export function computeQuote(input = {}) {
   };
 }
 
-// Persiste il calcolo come preventivo reale riusando il data-layer quotes.
-// Il prezzo autoritativo definitivo resterà lato server quando arriverà il
-// backend; qui creiamo il documento con l'unitario calcolato (preview KB).
-export async function createQuoteFromCalc(sb, tenantId, { customerId, customerName, description, calc, notes } = {}) {
+// Descrizione-SNAPSHOT: congela nel testo della riga il dettaglio del calcolo,
+// così il documento resta spiegabile e NON dipende dai valori futuri del
+// catalogo (nessun ricalcolo retroattivo). Solo il prezzo unitario fa fede.
+export function snapshotDescription(baseDesc, calc) {
+  const base = (baseDesc && String(baseDesc).trim()) || 'Prodotto personalizzato';
+  if (!calc) return base;
+  const parts = `Mat ${calc.materialeConSfrido} + Macc ${calc.inputs.macchina} + Lav ${calc.lavoro} + Design ${calc.inputs.design}`;
+  const extra = `${calc.inputs.express ? ' +25% express' : ''}${calc.discountPct ? ` −${Math.round(calc.discountPct * 100)}%` : ''}`;
+  return `${base} — [${parts}] ×${calc.markup}${extra} = ${calc.discountedUnit}€ (KB)`;
+}
+
+// Costruisce il payload di riga (snapshot) dal calcolo. Prezzo unitario e
+// descrizione sono congelati; line_total è colonna generata dal DB.
+export function quoterLinePayload({ description, calc, sortOrder } = {}) {
   if (!calc) throw new Error('calcolo mancante');
-  const quote = await createQuote(sb, tenantId, { customer_id: customerId || null, customer_name: customerName || null, notes: notes || null });
-  await addLine(sb, tenantId, quote.id, {
-    description: description || 'Prodotto personalizzato',
+  return {
+    description: snapshotDescription(description, calc),
     quantity: calc.quantity,
     unit_price: calc.discountedUnit,
     discount: 0,
     tax: 0,
-  });
+    sort_order: Number(sortOrder) || 0,
+  };
+}
+
+// Aggiunge una riga (snapshot) a un preventivo ESISTENTE riusando quotes.addLine.
+export async function addQuoterLineToQuote(sb, tenantId, quoteId, { description, calc, sortOrder } = {}) {
+  if (!quoteId) throw new Error('preventivo mancante');
+  return addLine(sb, tenantId, quoteId, quoterLinePayload({ description, calc, sortOrder }));
+}
+
+// Persiste il calcolo come NUOVO preventivo reale riusando il data-layer quotes.
+// Il prezzo autoritativo definitivo resterà lato server quando arriverà il
+// backend; qui creiamo il documento con l'unitario calcolato (snapshot KB).
+export async function createQuoteFromCalc(sb, tenantId, { customerId, customerName, description, calc, notes } = {}) {
+  if (!calc) throw new Error('calcolo mancante');
+  const quote = await createQuote(sb, tenantId, { customer_id: customerId || null, customer_name: customerName || null, notes: notes || null });
+  await addLine(sb, tenantId, quote.id, quoterLinePayload({ description, calc, sortOrder: 0 }));
   return quote;
 }

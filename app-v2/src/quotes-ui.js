@@ -5,6 +5,8 @@ import * as Q from './quotes.js';
 import * as CRM from './crm.js';
 import * as CAT from './catalog.js';
 import { convertQuoteToOrder } from './orders.js';
+import { addQuoterLineToQuote } from './quoter.js';
+import { openQuoterDrawer } from './quoter-drawer.js';
 import { roleForTenant } from './context.js';
 
 const esc = (s) => String(s == null ? '' : s).replace(/[&<>"']/g, (c) => (
@@ -51,7 +53,7 @@ export function renderQuoteDetail(bundle, role) {
     <div class="v2-table-wrap"><table class="v2-table"><thead><tr>
       <th>Descrizione</th><th>Qtà</th><th>Prezzo</th><th>Sconto</th><th>Imposta</th><th>Totale</th><th></th></tr></thead>
       <tbody>${lines}</tbody></table></div>
-    ${w ? '<button class="v2-btn v2-sm" data-add-line>+ Riga</button>' : ''}
+    ${w ? '<button class="v2-btn v2-sm" data-add-line>+ Riga</button> <button class="v2-btn v2-sm" data-quoter-line="' + esc(q.id) + '">🧮 Riga da Smart Quoter</button>' : ''}
     <div class="v2-summary">
       <div><span>Subtotale</span><b>${eur(t.subtotal)}</b></div>
       <div><span>Sconto</span><b>-${eur(t.discount)}</b></div>
@@ -180,6 +182,12 @@ export function mount(container, { sb, ctx }) {
         catch (e) { alert(Q.friendlyError(e)); }
       }));
       const al = pane.querySelector('[data-add-line]'); if (al) al.addEventListener('click', () => lineForm(id, bundle.lines.length));
+      const ql = pane.querySelector('[data-quoter-line]'); if (ql) ql.addEventListener('click', () => {
+        openQuoterDrawer({ sb, ctx, confirmLabel: 'Aggiungi al preventivo', onConfirm: async (calc, description) => {
+          await addQuoterLineToQuote(sb, tenantId, id, { description, calc, sortOrder: bundle.lines.length });
+          toast(root, 'Riga aggiunta dal Quoter'); detail(id);
+        } });
+      });
     } catch (e) { pane.innerHTML = errorBox(Q.friendlyError(e)); }
   }
 

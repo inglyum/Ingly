@@ -6,6 +6,8 @@
 // Supabase reale e mock demo.
 import * as CAT from './catalog.js';
 import * as ST from './storage.js';
+import { createQuoteFromCalc } from './quoter.js';
+import { openQuoterDrawer } from './quoter-drawer.js';
 import { roleForTenant } from './context.js';
 
 const esc = (s) => String(s == null ? '' : s).replace(/[&<>"']/g, (c) => (
@@ -65,6 +67,7 @@ export function renderProductDetail(p, role) {
     <header class="cat-detail-head">
       <button class="btn btn-ghost" data-back>← Catalogo</button>
       <div class="cat-detail-actions">
+        ${w ? '<button class="btn" data-quote-prod="' + esc(p.id) + '">🧮 Quota</button>' : ''}
         ${w ? '<button class="btn" data-edit="' + esc(p.id) + '">Modifica</button>' : ''}
         ${d ? '<button class="btn btn-danger" data-del="' + esc(p.id) + '">Archivia</button>' : ''}
       </div>
@@ -241,6 +244,13 @@ export function mount(container, { sb, ctx }) {
       pane.innerHTML = renderProductDetail(p, role);
       pane.querySelector('[data-back]').addEventListener('click', list);
       const ed = pane.querySelector('[data-edit]'); if (ed) ed.addEventListener('click', () => form(p));
+      const qp = pane.querySelector('[data-quote-prod]'); if (qp) qp.addEventListener('click', () => {
+        openQuoterDrawer({ sb, ctx, confirmLabel: 'Crea preventivo', prefill: { description: p.name, materiale: p.cost != null ? p.cost : 0 }, onConfirm: async (calc, description) => {
+          const quote = await createQuoteFromCalc(sb, tenantId, { description, calc });
+          toast(root, 'Preventivo creato: ' + (quote.number || quote.id), 'ok');
+          setTimeout(() => { location.hash = '#/quotes'; }, 400);
+        } });
+      });
       const dl = pane.querySelector('[data-del]'); if (dl) dl.addEventListener('click', async () => {
         const ok = await confirmModal(root, { title: 'Archivia prodotto', message: `Archiviare “${p.name}”? Potrai ripristinarlo dai filtri.`, danger: true });
         if (!ok) return;
