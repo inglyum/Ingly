@@ -36,15 +36,10 @@ function viewCatalog() {
     <div data-catalog-root><div class="v2-loading">⏳ Inizializzazione catalogo…</div></div>`;
 }
 
-// ── ORDINI & WORKFLOW ────────────────────────────────────────────────────
+// ── ORDINI & WORKFLOW (live: montato dal router via orders-ui.js) ──────────
 function viewOrders() {
-  const cols = [['bozza', 'Bozza'], ['produzione', 'In produzione'], ['pronto', 'Pronto'], ['consegnato', 'Consegnato']];
-  return `${head({ icon: '📦', n: 'Ordini & Workflow' }, 'Kanban ordini · coda produzione')}
-    <div class="v2-toolbar">${nyc('+ Nuovo ordine')} ${nyc('Nuovo preventivo rapido')}</div>
-    <div class="v2-kanban">${cols.map(([k, l]) =>
-      `<div class="v2-kcol" data-col="${k}"><div class="v2-kcol-h">${esc(l)} <span class="v2-kcount">0</span></div>
-        <div class="v2-kbody">${empty('—')}</div></div>`).join('')}</div>
-    <div class="v2-note">Le colonne rispecchiano gli stati ordine di v96. I dati arriveranno da Supabase (staging).</div>`;
+  return `${head({ icon: '📦', n: 'Ordini & Workflow' }, 'Kanban ordini · da preventivo · connesso a Supabase')}
+    <div data-orders-root><div class="v2-loading">⏳ Inizializzazione ordini…</div></div>`;
 }
 
 // ── GENERICO (modulo non ancora connesso) ────────────────────────────────

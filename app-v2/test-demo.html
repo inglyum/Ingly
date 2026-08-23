@@ -27,15 +27,18 @@ import { mountRouter } from './src/router.js';
 // ── Mock Supabase in memoria (subset usato dai data-layer) ──────────────────
 function makeMock(store){
   let uid = 2000; const now = () => new Date().toISOString(); const r2=n=>Math.round((Number(n)||0)*100)/100;
-  const counters = {}; for(const c of (store.sales_quote_counter||[])) counters[c.tenant_id]=(c.next_val||1)-1;
-  function recalc(qid){ const ls=(store.sales_quote_line||[]).filter(l=>l.quote_id===qid); const q=(store.sales_quote||[]).find(x=>x.id===qid); if(!q)return;
-    q.subtotal=r2(ls.reduce((s,l)=>s+l.quantity*l.unit_price,0)); q.discount=r2(ls.reduce((s,l)=>s+(l.discount||0),0));
-    q.tax=r2(ls.reduce((s,l)=>s+(l.tax||0),0)); q.total=r2(ls.reduce((s,l)=>s+l.line_total,0)); }
+  const counters = {}; for(const c of (store.sales_quote_counter||[])) counters['sales_quote'+c.tenant_id]=(c.next_val||1)-1;
+  const HDR={ sales_quote_line:['sales_quote','quote_id'], sales_order_line:['sales_order','order_id'] };
+  function recalc(lt, hdr, fk, id){ const ls=(store[lt]||[]).filter(l=>l[fk]===id); const h=(store[hdr]||[]).find(x=>x.id===id); if(!h)return;
+    h.subtotal=r2(ls.reduce((s,l)=>s+l.quantity*l.unit_price,0)); h.discount=r2(ls.reduce((s,l)=>s+(l.discount||0),0));
+    h.tax=r2(ls.reduce((s,l)=>s+(l.tax||0),0)); h.total=r2(ls.reduce((s,l)=>s+l.line_total,0)); }
   function onInsert(table,row){
-    if(table==='sales_quote'){ const t=row.tenant_id; counters[t]=(counters[t]||0)+1; row.number='PREV-'+String(counters[t]).padStart(6,'0');
-      if(!row.valid_until){ const d=new Date(); d.setDate(d.getDate()+7); row.valid_until=d.toISOString().slice(0,10); }
-      row.status=row.status||'DRAFT'; row.issue_date=row.issue_date||now().slice(0,10); row.subtotal=row.discount=row.tax=row.total=0; }
-    if(table==='sales_quote_line'){ row.line_total=r2(row.quantity*row.unit_price-(row.discount||0)+(row.tax||0)); }
+    if(table==='sales_quote'||table==='sales_order'){ const pfx=table==='sales_quote'?'PREV':'ORD'; const key=table+row.tenant_id;
+      counters[key]=(counters[key]||0)+1; row.number=pfx+'-'+String(counters[key]).padStart(6,'0');
+      row.status=row.status||(table==='sales_quote'?'DRAFT':'CONFIRMED'); row.subtotal=row.discount=row.tax=row.total=0;
+      if(table==='sales_quote'){ if(!row.valid_until){ const d=new Date(); d.setDate(d.getDate()+7); row.valid_until=d.toISOString().slice(0,10); } row.issue_date=row.issue_date||now().slice(0,10); }
+      else { row.order_date=row.order_date||now().slice(0,10); } }
+    if(table.endsWith('_line')){ row.line_total=r2(row.quantity*row.unit_price-(row.discount||0)+(row.tax||0)); }
   }
   function builder(table){
     const st = { table, filters:[], op:'select', payload:null, orderBy:null, asc:true, lim:null };
@@ -59,11 +62,11 @@ function makeMock(store){
   function run(st,mode){
     const arr = store[st.table] || (store[st.table]=[]);
     if(st.op==='insert'){ const row={ id:'id'+(++uid), created_at:now(), ...st.payload }; onInsert(st.table,row); arr.push(row);
-      if(st.table==='sales_quote_line') recalc(row.quote_id); return { data:row, error:null }; }
+      if(HDR[st.table]){ const [h,fk]=HDR[st.table]; recalc(st.table,h,fk,row[fk]); } return { data:row, error:null }; }
     if(st.op==='update'){ let rows=arr.filter(r=>st.filters.every(f=>f(r))); rows.forEach(r=>Object.assign(r,st.payload));
-      rows.forEach(r=>{ if(st.table==='sales_quote_line'){ r.line_total=r2(r.quantity*r.unit_price-(r.discount||0)+(r.tax||0)); recalc(r.quote_id); } }); return { data:rows[0]||null, error:null }; }
+      if(HDR[st.table]){ const [h,fk]=HDR[st.table]; rows.forEach(r=>{ r.line_total=r2(r.quantity*r.unit_price-(r.discount||0)+(r.tax||0)); recalc(st.table,h,fk,r[fk]); }); } return { data:rows[0]||null, error:null }; }
     if(st.op==='delete'){ const rem=arr.filter(r=>st.filters.every(f=>f(r))); rem.forEach(r=>arr.splice(arr.indexOf(r),1));
-      rem.forEach(r=>{ if(st.table==='sales_quote_line') recalc(r.quote_id); }); return { data:null, error:null }; }
+      if(HDR[st.table]){ const [h,fk]=HDR[st.table]; rem.forEach(r=>recalc(st.table,h,fk,r[fk])); } return { data:null, error:null }; }
     let rows=arr.filter(r=>st.filters.every(f=>f(r)));
     if(st.orderBy) rows=rows.slice().sort((a,b)=>{const x=a[st.orderBy],y=b[st.orderBy]; if(x===y)return 0; return (x>y?1:-1)*(st.asc?1:-1);});
     if(st.lim) rows=rows.slice(0,st.lim);
@@ -107,6 +110,12 @@ function seed(){
       { id:'l3', tenant_id:'t1', quote_id:'q2', product_id:'p2', description:'QR Menu ristorante', quantity:1, unit_price:19.90, discount:0, tax:0, line_total:19.90, sort_order:0 },
     ],
     sales_quote_counter:[{ tenant_id:'t1', next_val:3 }],
+    sales_order:[
+      { id:'o1', tenant_id:'t1', number:'ORD-000001', customer_id:'c3', customer_name:'Chef Nino', quote_id:'q2', status:'IN_PRODUCTION', order_date:'2026-08-16', subtotal:19.90, discount:0, tax:0, total:19.90, deleted_at:null },
+    ],
+    sales_order_line:[
+      { id:'ol1', tenant_id:'t1', order_id:'o1', product_id:'p2', description:'QR Menu ristorante', quantity:1, unit_price:19.90, discount:0, tax:0, line_total:19.90, sort_order:0 },
+    ],
   };
 }
 

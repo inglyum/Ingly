@@ -4,6 +4,7 @@
 import * as Q from './quotes.js';
 import * as CRM from './crm.js';
 import * as CAT from './catalog.js';
+import { convertQuoteToOrder } from './orders.js';
 import { roleForTenant } from './context.js';
 
 const esc = (s) => String(s == null ? '' : s).replace(/[&<>"']/g, (c) => (
@@ -38,6 +39,7 @@ export function renderQuoteDetail(bundle, role) {
       <div style="display:flex;gap:8px;flex-wrap:wrap">
         ${w ? `<button class="v2-btn" data-edit="${esc(q.id)}">Modifica</button>` : ''}
         ${w ? `<button class="v2-btn" data-dup="${esc(q.id)}">Duplica</button>` : ''}
+        ${w && q.status === 'ACCEPTED' ? `<button class="v2-btn" data-convert="${esc(q.id)}">➡️ Converti in ordine</button>` : ''}
         ${d ? `<button class="v2-btn v2-danger" data-del="${esc(q.id)}">Archivia</button>` : ''}
       </div></div>
     <h2>${esc(q.number || 'Bozza')} <span class="v2-chip">${esc(STATUS_LABEL[q.status] || q.status)}</span></h2>
@@ -157,6 +159,11 @@ export function mount(container, { sb, ctx }) {
       const ed = pane.querySelector('[data-edit]'); if (ed) ed.addEventListener('click', () => form(bundle.quote));
       const dp = pane.querySelector('[data-dup]'); if (dp) dp.addEventListener('click', async () => {
         try { const c = await Q.duplicateQuote(sb, tenantId, id); toast(root, 'Duplicato: ' + (c.number || 'nuova bozza')); detail(c.id); }
+        catch (e) { alert(Q.friendlyError(e)); }
+      });
+      const cv = pane.querySelector('[data-convert]'); if (cv) cv.addEventListener('click', async () => {
+        if (!window.confirm('Creare un ordine da questo preventivo?')) return;
+        try { const o = await convertQuoteToOrder(sb, tenantId, id); toast(root, 'Ordine creato: ' + (o.number || '')); location.hash = '#/gestione_ordini'; }
         catch (e) { alert(Q.friendlyError(e)); }
       });
       const dl = pane.querySelector('[data-del]'); if (dl) dl.addEventListener('click', async () => {

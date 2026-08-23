@@ -67,3 +67,18 @@ l'esito reale.
   se il prodotto cambia/viene rimosso. Base pronta per Order→Invoice→Payment.
 - **Dashboard**: aggiunti solo KPI realmente calcolabili (totali/bozze/inviati/
   accettati + valore accettati). Ricavi/margine reali restano per Ordini/Fatture.
+
+## 2026-08-22 — Modulo Ordini (sales_order) — Quote→Order
+- **Nuove tabelle** `sales_order` + `sales_order_line` (migration 0009 additiva).
+  Riuso completo del pattern 0008: RLS `sales.order` (matrice CRM, resource unico),
+  numerazione per-tenant race-safe `next_order_number` (`ORD-000001`), totali DB
+  (line_total generato + `sales_order_recalc`), soft-delete via trigger condiviso.
+- **Quote→Order**: `convertQuoteToOrder` crea l'ordine da un preventivo, copia le
+  righe come snapshot e collega `quote_id` (FK ON DELETE SET NULL). Il preventivo
+  originale non viene modificato. UI: bottone "Converti in ordine" solo su stato
+  ACCEPTED. Nessuna logica duplicata (stesso approccio di duplicateQuote).
+- **UI Ordini** montata sulla route esistente `gestione_ordini` (kanban per stato
+  + lista), niente route duplicate. Stati CONFIRMED/IN_PRODUCTION/READY/DELIVERED/
+  CANCELLED (allineati al kanban v96).
+- **Dashboard**: sbloccato il **ricavo reale** (somma ordini non annullati) +
+  ordini totali/aperti — ora semanticamente corretto perché esistono gli Ordini.

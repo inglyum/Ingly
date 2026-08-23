@@ -104,7 +104,7 @@ describe('V2 Routing / rendering moduli (offline)', (s) => {
     ['dashboard', 'clients', 'catalog', 'gestione_ordini'].forEach((k) =>
       assert(IMPLEMENTED.includes(k), `non implementato: ${k}`));
     assert(/data-crm-pane/.test(renderView('clients', ctx)), 'CRM senza pane live');
-    assert(/v2-kanban/.test(renderView('gestione_ordini', ctx)), 'Ordini senza kanban');
+    assert(/data-orders-root/.test(renderView('gestione_ordini', ctx)), 'Ordini senza root live');
     assert(/data-catalog-root/.test(renderView('catalog', ctx)), 'Catalogo senza root live');
   });
   it(s, 'i moduli non implementati sono marcati "non ancora connesso" (nessun controllo finto)', async () => {
