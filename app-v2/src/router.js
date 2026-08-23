@@ -12,6 +12,7 @@ import { mount as mountSuppliers } from './suppliers-ui.js';
 import { mount as mountPurchases } from './purchases-ui.js';
 import { mount as mountWarehouse } from './warehouse-ui.js';
 import { mount as mountProjects } from './projects-ui.js';
+import { mount as mountFinance } from './finance-ui.js';
 
 export function currentRoute() {
   const h = (typeof location !== 'undefined' && location.hash || '').replace(/^#\/?/, '');
@@ -36,6 +37,7 @@ export function mountRouter(root, ctx, sb) {
     if (r === 'purchases' && sb) { try { mountPurchases(view, { sb, ctx }); } catch (_) {} }
     if (r === 'inventory' && sb) { try { mountWarehouse(view, { sb, ctx }); } catch (_) {} }
     if (r === 'projects' && sb) { try { mountProjects(view, { sb, ctx }); } catch (_) {} }
+    if (r === 'finance' && sb) { try { mountFinance(view, { sb, ctx }); } catch (_) {} }
     root.querySelectorAll('[data-route]').forEach((b) =>
       b.classList.toggle('active', b.getAttribute('data-route') === r));
     const crumb = root.querySelector('#v2-crumb');

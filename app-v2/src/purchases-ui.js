@@ -3,6 +3,7 @@
 import * as PUR from './purchases.js';
 import * as SUP from './suppliers.js';
 import * as CAT from './catalog.js';
+import * as FIN from './finance.js';
 import { roleForTenant } from './context.js';
 
 const esc = (s) => String(s == null ? '' : s).replace(/[&<>"']/g, (c) => (
@@ -166,6 +167,26 @@ export function mount(container, { sb, ctx }) {
         if (!window.confirm('Caricare a magazzino le righe di questo ordine e segnarlo RICEVUTO?')) return;
         try { const r = await PUR.receivePurchase(sb, tenantId, id); toast(root, `Merce ricevuta (${r.received} righe a magazzino)`); detail(id); }
         catch (e) { alert(PUR.friendlyError(e)); }
+      });
+      // ── Pagamenti fornitore (finance.payment) ──
+      const w2 = PUR.canWrite(role);
+      const pays = await FIN.listSupplierPayments(sb, { purchaseOrderId: id }).catch(() => []);
+      const paid = FIN.supplierPaidFor(pays, id); const residuo = Math.round((Number(bundle.order.total || 0) - paid) * 100) / 100;
+      const payCard = document.createElement('div'); payCard.className = 'v2-card';
+      payCard.innerHTML = `<h3>Pagamenti fornitore</h3>
+        <div class="v2-kv"><div><span>Totale</span>${eur(bundle.order.total)}</div><div><span>Pagato</span>${eur(paid)}</div><div><span>Residuo</span>${eur(residuo)}</div></div>
+        <ul class="v2-list">${pays.map((p) => `<li><b>${eur(p.amount)}</b> · ${esc(FIN.METHOD_LABEL[p.method] || p.method)} · <span class="v2-muted">${esc((p.paid_date || '').slice(0, 10))}</span></li>`).join('') || '<li class="v2-muted">Nessun pagamento.</li>'}</ul>
+        ${w2 && residuo > 0 ? `<form class="v2-form" data-pay-form>
+          <div class="v2-form-row"><label>Importo €<input name="amount" type="number" step="0.01" value="${residuo}"></label>
+          <label>Metodo<select name="method">${FIN.PAYMENT_METHODS.map((m) => `<option value="${m}">${FIN.METHOD_LABEL[m]}</option>`).join('')}</select></label></div>
+          <div class="v2-form-actions"><button type="submit" class="v2-btn">Registra pagamento</button></div>
+          <div class="v2-form-msg" data-pay-msg></div></form>` : (residuo <= 0 ? '<div class="v2-muted">Ordine saldato.</div>' : '')}`;
+      pane.appendChild(payCard);
+      const pf = payCard.querySelector('[data-pay-form]'); if (pf) pf.addEventListener('submit', async (ev) => {
+        ev.preventDefault(); const msg = pf.querySelector('[data-pay-msg]');
+        const d = Object.fromEntries(new FormData(pf).entries());
+        try { await FIN.registerSupplierPayment(sb, tenantId, { ...d, purchase_order_id: id, supplier_id: bundle.order.supplier_id, supplier_name: bundle.order.supplier_name }, residuo); toast(root, 'Pagamento registrato'); detail(id); }
+        catch (e) { msg.textContent = (e && e.code === 'OVERPAY') ? 'Importo superiore al residuo.' : PUR.friendlyError(e); }
       });
       pane.querySelectorAll('[data-del-line]').forEach((b) => b.addEventListener('click', async () => {
         try { await PUR.deleteLine(sb, b.getAttribute('data-del-line')); detail(id); }

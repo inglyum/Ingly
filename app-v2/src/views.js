@@ -90,7 +90,12 @@ function viewProjects() {
     <div data-projects-root><div class="v2-loading">\u23f3 Inizializzazione commesse\u2026</div></div>`;
 }
 
-const SPECIAL = { dashboard: viewDashboard, clients: viewClients, catalog: viewCatalog, quotes: viewQuotes, gestione_ordini: viewOrders, invoices: viewInvoices, aging: viewAging, suppliers: viewSuppliers, purchases: viewPurchases, inventory: viewWarehouse, projects: viewProjects };
+function viewFinance() {
+  return `${head({ icon: '\u{1F4B0}', n: 'Finanza' }, 'Cashflow \u00b7 incassi \u00b7 pagamenti \u00b7 esposizione \u00b7 derivato dai documenti')}
+    <div data-finance-root><div class="v2-loading">\u23f3 Inizializzazione finanza\u2026</div></div>`;
+}
+
+const SPECIAL = { dashboard: viewDashboard, clients: viewClients, catalog: viewCatalog, quotes: viewQuotes, gestione_ordini: viewOrders, invoices: viewInvoices, aging: viewAging, suppliers: viewSuppliers, purchases: viewPurchases, inventory: viewWarehouse, projects: viewProjects, finance: viewFinance };
 
 export function renderView(section, ctx) {
   const fn = SPECIAL[section];
