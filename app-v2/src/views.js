@@ -100,7 +100,12 @@ function viewReports() {
     <div data-reports-root><div class="v2-loading">\u23f3 Elaboro i report\u2026</div></div>`;
 }
 
-const SPECIAL = { dashboard: viewDashboard, clients: viewClients, catalog: viewCatalog, quotes: viewQuotes, gestione_ordini: viewOrders, invoices: viewInvoices, aging: viewAging, suppliers: viewSuppliers, purchases: viewPurchases, inventory: viewWarehouse, projects: viewProjects, finance: viewFinance, analytics: viewReports };
+function viewIntel() {
+  return `${head({ icon: '\u{1F9E0}', n: 'Intelligence Hub' }, 'Riordino \u00b7 anomalie \u00b7 RFM \u00b7 prodotti \u00b7 forecast \u00b7 insight deterministici')}
+    <div data-intel-root><div class="v2-loading">\u23f3 Elaboro gli insight\u2026</div></div>`;
+}
+
+const SPECIAL = { dashboard: viewDashboard, clients: viewClients, catalog: viewCatalog, quotes: viewQuotes, gestione_ordini: viewOrders, invoices: viewInvoices, aging: viewAging, suppliers: viewSuppliers, purchases: viewPurchases, inventory: viewWarehouse, projects: viewProjects, finance: viewFinance, analytics: viewReports, intel: viewIntel };
 
 export function renderView(section, ctx) {
   const fn = SPECIAL[section];
