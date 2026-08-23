@@ -35,6 +35,7 @@ export function renderPurchaseDetail(bundle, role) {
     <div class="v2-detail-head"><button class="v2-btn v2-ghost" data-back>← Lista</button>
       <div style="display:flex;gap:8px;flex-wrap:wrap">
         ${w ? `<button class="v2-btn" data-edit="${esc(o.id)}">Modifica</button>` : ''}
+        ${w && o.status !== 'RECEIVED' && o.status !== 'CANCELLED' ? `<button class="v2-btn" data-receive="${esc(o.id)}">📥 Ricevi merce</button>` : ''}
         ${d ? `<button class="v2-btn v2-danger" data-del="${esc(o.id)}">Archivia</button>` : ''}
       </div></div>
     <h2>${esc(o.number || 'Bozza')} <span class="v2-chip">${esc(SL[o.status] || o.status)}</span></h2>
@@ -159,6 +160,11 @@ export function mount(container, { sb, ctx }) {
       });
       const st = pane.querySelector('[data-status]'); if (st) st.addEventListener('change', async () => {
         try { await PUR.changeStatus(sb, id, st.value); toast(root, 'Stato aggiornato'); detail(id); }
+        catch (e) { alert(PUR.friendlyError(e)); }
+      });
+      const rc = pane.querySelector('[data-receive]'); if (rc) rc.addEventListener('click', async () => {
+        if (!window.confirm('Caricare a magazzino le righe di questo ordine e segnarlo RICEVUTO?')) return;
+        try { const r = await PUR.receivePurchase(sb, tenantId, id); toast(root, `Merce ricevuta (${r.received} righe a magazzino)`); detail(id); }
         catch (e) { alert(PUR.friendlyError(e)); }
       });
       pane.querySelectorAll('[data-del-line]').forEach((b) => b.addEventListener('click', async () => {

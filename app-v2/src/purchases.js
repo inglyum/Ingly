@@ -73,3 +73,26 @@ export async function deleteLine(sb, id) {
   const { error } = await sb.from('purchase_order_line').delete().eq('id', id);
   if (error) throw error; return true;
 }
+
+// RICEZIONE MERCE: carica a magazzino le righe dell'ordine (movimenti IN,
+// reference all'ordine di acquisto) e porta lo stato a RECEIVED. Integra il
+// ciclo passivo Acquisti → Magazzino. Righe senza prodotto (product_id null)
+// vengono ignorate (servizi/spese non a stock).
+export async function receivePurchase(sb, tenantId, poId) {
+  const { order, lines } = await getPurchase(sb, poId);
+  if (!order) throw new Error('ordine di acquisto non trovato');
+  let received = 0;
+  for (const l of lines) {
+    if (!l.product_id || Number(l.quantity) <= 0) continue;
+    const { error } = await sb.from('stock_movement').insert({
+      tenant_id: tenantId, product_id: l.product_id, type: 'IN',
+      quantity: Number(l.quantity), location: 'MAIN',
+      reference_type: 'purchase', reference_id: poId,
+      note: 'Ricezione ' + (order.number || ''),
+    });
+    if (error) throw error;
+    received += 1;
+  }
+  await updatePurchase(sb, poId, { status: 'RECEIVED' });
+  return { received };
+}

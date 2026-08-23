@@ -58,7 +58,7 @@ function makeMock(store) {
   return { from: (t) => builder(t) };
 }
 
-const store = () => ({ purchase_order: [], purchase_order_line: [], supplier: [{ id: 'sup1', tenant_id: 't1', name: 'Legnami', deleted_at: null }] });
+const store = () => ({ purchase_order: [], purchase_order_line: [], stock_movement: [], supplier: [{ id: 'sup1', tenant_id: 't1', name: 'Legnami', deleted_at: null }] });
 
 describe('Acquisti data-layer (mock trigger)', (s) => {
   it(s, 'createPurchase: numero ACQ per-tenant, stato DRAFT', async () => {
@@ -95,6 +95,18 @@ describe('Acquisti data-layer (mock trigger)', (s) => {
     await PUR.createPurchase(sb, 't1', { supplier_id: 'sup1', supplier_name: 'Plexi' });
     assertEq((await PUR.listPurchases(sb, { status: 'RECEIVED' })).length, 1);
     assertEq((await PUR.listPurchases(sb, { search: 'plexi' })).length, 1);
+  });
+  it(s, 'receivePurchase: crea movimenti IN a magazzino e stato RECEIVED', async () => {
+    const st = store(); const sb = makeMock(st);
+    const po = await PUR.createPurchase(sb, 't1', { supplier_id: 'sup1' });
+    await PUR.addLine(sb, 't1', po.id, { product_id: 'prodA', description: 'A', quantity: 20, unit_price: 5 });
+    await PUR.addLine(sb, 't1', po.id, { product_id: null, description: 'Spesa trasporto', quantity: 1, unit_price: 10 });
+    const r = await PUR.receivePurchase(sb, 't1', po.id);
+    assertEq(r.received, 1); // solo la riga con product_id
+    assertEq(st.purchase_order[0].status, 'RECEIVED');
+    assertEq(st.stock_movement.length, 1);
+    assertEq(st.stock_movement[0].type, 'IN'); assertEq(st.stock_movement[0].quantity, 20);
+    assertEq(st.stock_movement[0].reference_type, 'purchase'); assertEq(st.stock_movement[0].product_id, 'prodA');
   });
 });
 
