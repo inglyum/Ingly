@@ -14,5 +14,6 @@ import './quotes.test.mjs';
 import './orders.test.mjs';
 import './invoices.test.mjs';
 import './payments.test.mjs';
+import './aging.test.mjs';
 import { run } from './harness.mjs';
 await run();

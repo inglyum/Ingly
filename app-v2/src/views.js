@@ -65,7 +65,12 @@ function viewInvoices() {
     <div data-invoices-root><div class="v2-loading">⏳ Inizializzazione fatture…</div></div>`;
 }
 
-const SPECIAL = { dashboard: viewDashboard, clients: viewClients, catalog: viewCatalog, quotes: viewQuotes, gestione_ordini: viewOrders, invoices: viewInvoices };
+function viewAging() {
+  return `${head({ icon: '⏰', n: 'Scadenziario' }, 'Scadenze incassi · aging · derivato dalle fatture')}
+    <div data-aging-root><div class="v2-loading">⏳ Inizializzazione scadenziario…</div></div>`;
+}
+
+const SPECIAL = { dashboard: viewDashboard, clients: viewClients, catalog: viewCatalog, quotes: viewQuotes, gestione_ordini: viewOrders, invoices: viewInvoices, aging: viewAging };
 
 export function renderView(section, ctx) {
   const fn = SPECIAL[section];
