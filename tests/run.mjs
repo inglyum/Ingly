@@ -12,5 +12,6 @@ import './dashboard.test.mjs';
 import './catalog.v2.test.mjs';
 import './quotes.test.mjs';
 import './orders.test.mjs';
+import './invoices.test.mjs';
 import { run } from './harness.mjs';
 await run();

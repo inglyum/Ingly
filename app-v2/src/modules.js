@@ -20,6 +20,7 @@ export const MODULES = [
   {"s":"listino","n":"Listino B2B","icon":"💼","group":"Preventivi"},
   {"s":"template_docs","n":"Template Documenti","icon":"🎨","group":"Preventivi"},
   {"s":"quoteintel","n":"Quote Intelligence","icon":"📈","group":"Preventivi"},
+  {"s":"invoices","n":"Fatture","icon":"🧮","group":"Vendite"},
   {"s":"sales","n":"Vendite & Fatture","icon":"💰","group":"Vendite"},
   {"s":"sales_archive","n":"Archivio Vendite","icon":"📋","group":"Vendite"},
   {"s":"fiscal","n":"Radar Fiscale","icon":"📊","group":"Finanza"},

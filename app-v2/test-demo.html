@@ -28,7 +28,7 @@ import { mountRouter } from './src/router.js';
 function makeMock(store){
   let uid = 2000; const now = () => new Date().toISOString(); const r2=n=>Math.round((Number(n)||0)*100)/100;
   const counters = {}; for(const c of (store.sales_quote_counter||[])) counters['sales_quote'+c.tenant_id]=(c.next_val||1)-1;
-  const HDR={ sales_quote_line:['sales_quote','quote_id'], sales_order_line:['sales_order','order_id'] };
+  const HDR={ sales_quote_line:['sales_quote','quote_id'], sales_order_line:['sales_order','order_id'], sales_invoice_line:['sales_invoice','invoice_id'] };
   function recalc(lt, hdr, fk, id){ const ls=(store[lt]||[]).filter(l=>l[fk]===id); const h=(store[hdr]||[]).find(x=>x.id===id); if(!h)return;
     h.subtotal=r2(ls.reduce((s,l)=>s+l.quantity*l.unit_price,0)); h.discount=r2(ls.reduce((s,l)=>s+(l.discount||0),0));
     h.tax=r2(ls.reduce((s,l)=>s+(l.tax||0),0)); h.total=r2(ls.reduce((s,l)=>s+l.line_total,0)); }
@@ -38,6 +38,10 @@ function makeMock(store){
       row.status=row.status||(table==='sales_quote'?'DRAFT':'CONFIRMED'); row.subtotal=row.discount=row.tax=row.total=0;
       if(table==='sales_quote'){ if(!row.valid_until){ const d=new Date(); d.setDate(d.getDate()+7); row.valid_until=d.toISOString().slice(0,10); } row.issue_date=row.issue_date||now().slice(0,10); }
       else { row.order_date=row.order_date||now().slice(0,10); } }
+    if(table==='sales_invoice'){ const y=row.year||(row.issue_date?Number(String(row.issue_date).slice(0,4)):new Date().getFullYear()); const key=table+row.tenant_id+y;
+      counters[key]=(counters[key]||0)+1; row.year=y; row.number='FATT-'+y+'-'+String(counters[key]).padStart(6,'0');
+      row.status=row.status||'DRAFT'; row.subtotal=row.discount=row.tax=row.total=0; row.paid_total=row.paid_total||0;
+      row.issue_date=row.issue_date||now().slice(0,10); if(!row.due_date){ const d=new Date(); d.setDate(d.getDate()+30); row.due_date=d.toISOString().slice(0,10); } }
     if(table.endsWith('_line')){ row.line_total=r2(row.quantity*row.unit_price-(row.discount||0)+(row.tax||0)); }
   }
   function builder(table){
@@ -115,6 +119,12 @@ function seed(){
     ],
     sales_order_line:[
       { id:'ol1', tenant_id:'t1', order_id:'o1', product_id:'p2', description:'QR Menu ristorante', quantity:1, unit_price:19.90, discount:0, tax:0, line_total:19.90, sort_order:0 },
+    ],
+    sales_invoice:[
+      { id:'inv1', tenant_id:'t1', number:'FATT-2026-000001', customer_id:'c1', customer_name:'Maria Russo', order_id:null, year:2026, status:'PARTIALLY_PAID', issue_date:'2026-08-05', due_date:'2026-09-04', subtotal:100, discount:0, tax:22, total:122, paid_total:50, deleted_at:null },
+    ],
+    sales_invoice_line:[
+      { id:'il1', tenant_id:'t1', invoice_id:'inv1', product_id:'p1', description:'Targa A5 incisa', quantity:2, unit_price:50, discount:0, tax:22, line_total:122, sort_order:0 },
     ],
   };
 }

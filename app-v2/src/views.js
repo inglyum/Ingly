@@ -60,7 +60,12 @@ function viewQuotes() {
     <div data-quotes-root><div class="v2-loading">⏳ Inizializzazione preventivi…</div></div>`;
 }
 
-const SPECIAL = { dashboard: viewDashboard, clients: viewClients, catalog: viewCatalog, quotes: viewQuotes, gestione_ordini: viewOrders };
+function viewInvoices() {
+  return `${head({ icon: '🧮', n: 'Fatture' }, 'Fatture · imponibile/IVA · scadenze · connesso a Supabase')}
+    <div data-invoices-root><div class="v2-loading">⏳ Inizializzazione fatture…</div></div>`;
+}
+
+const SPECIAL = { dashboard: viewDashboard, clients: viewClients, catalog: viewCatalog, quotes: viewQuotes, gestione_ordini: viewOrders, invoices: viewInvoices };
 
 export function renderView(section, ctx) {
   const fn = SPECIAL[section];

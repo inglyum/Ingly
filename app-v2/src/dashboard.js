@@ -4,6 +4,7 @@ import * as CRM from './crm.js';
 import { listProducts } from './catalog.js';
 import { listQuotes } from './quotes.js';
 import { listOrders } from './orders.js';
+import { listInvoices, balanceDue } from './invoices.js';
 
 // Aggrega i KPI CRM+catalogo+preventivi. Ritorna sempre una struttura completa
 // (0 se vuoto), mai eccezioni verso l'alto: errori → metriche a 0.
@@ -13,15 +14,17 @@ export async function loadDashboard(sb) {
     totalValue: 0, recentCustomers: [], recentActivities: [], error: null,
     quotesTotal: 0, quotesDraft: 0, quotesSent: 0, quotesAccepted: 0, quotesAcceptedValue: 0,
     ordersTotal: 0, ordersOpen: 0, ordersDelivered: 0, ordersRevenue: 0,
+    invoicesTotal: 0, invoicesUnpaid: 0, invoicedTotal: 0, collectedTotal: 0, outstandingTotal: 0,
   };
   try {
-    const [customers, companies, activities, products, quotes, orders] = await Promise.all([
+    const [customers, companies, activities, products, quotes, orders, invoices] = await Promise.all([
       CRM.listCustomers(sb, { limit: 500 }),
       CRM.listCompanies(sb, { limit: 500 }),
       CRM.listActivities(sb, { limit: 20 }),
       listProducts(sb, { limit: 500 }).catch(() => []),
       listQuotes(sb, { limit: 500 }).catch(() => []),
       listOrders(sb, { limit: 500 }).catch(() => []),
+      listInvoices(sb, { limit: 500 }).catch(() => []),
     ]);
     out.customers = customers.length;
     out.companies = companies.length;
@@ -37,6 +40,12 @@ export async function loadDashboard(sb) {
     out.ordersDelivered = orders.filter((o) => o.status === 'DELIVERED').length;
     // Ricavo reale = ordini non annullati (confermati→consegnati), semanticamente corretto.
     out.ordersRevenue = orders.filter((o) => o.status !== 'CANCELLED').reduce((s, o) => s + Number(o.total || 0), 0);
+    const activeInv = invoices.filter((i) => i.status !== 'CANCELLED' && i.status !== 'DRAFT');
+    out.invoicesTotal = invoices.length;
+    out.invoicesUnpaid = activeInv.filter((i) => balanceDue(i) > 0).length;
+    out.invoicedTotal = activeInv.reduce((s, i) => s + Number(i.total || 0), 0);
+    out.collectedTotal = activeInv.reduce((s, i) => s + Number(i.paid_total || 0), 0);
+    out.outstandingTotal = activeInv.reduce((s, i) => s + Math.max(0, balanceDue(i)), 0);
     out.b2b = customers.filter((c) => c.type === 'B2B').length;
     out.b2c = customers.filter((c) => c.type !== 'B2B').length;
     out.totalValue = customers.reduce((s, c) => s + Number(c.value_cached || 0), 0);

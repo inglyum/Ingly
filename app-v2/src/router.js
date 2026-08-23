@@ -6,6 +6,7 @@ import { mount as mountDashboard } from './dashboard-ui.js';
 import { mount as mountCatalog } from './catalog-ui.js';
 import { mount as mountQuotes } from './quotes-ui.js';
 import { mount as mountOrders } from './orders-ui.js';
+import { mount as mountInvoices } from './invoices-ui.js';
 
 export function currentRoute() {
   const h = (typeof location !== 'undefined' && location.hash || '').replace(/^#\/?/, '');
@@ -24,6 +25,7 @@ export function mountRouter(root, ctx, sb) {
     if (r === 'catalog' && sb) { try { mountCatalog(view, { sb, ctx }); } catch (_) {} }
     if (r === 'quotes' && sb) { try { mountQuotes(view, { sb, ctx }); } catch (_) {} }
     if (r === 'gestione_ordini' && sb) { try { mountOrders(view, { sb, ctx }); } catch (_) {} }
+    if (r === 'invoices' && sb) { try { mountInvoices(view, { sb, ctx }); } catch (_) {} }
     root.querySelectorAll('[data-route]').forEach((b) =>
       b.classList.toggle('active', b.getAttribute('data-route') === r));
     const crumb = root.querySelector('#v2-crumb');
