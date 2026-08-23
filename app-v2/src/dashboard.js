@@ -8,6 +8,7 @@ import { listInvoices, balanceDue } from './invoices.js';
 import { listPurchases } from './purchases.js';
 import { loadInventory } from './warehouse.js';
 import { listProjects } from './projects.js';
+import { listShipments } from './logistics.js';
 
 // Aggrega i KPI CRM+catalogo+preventivi. Ritorna sempre una struttura completa
 // (0 se vuoto), mai eccezioni verso l'alto: errori → metriche a 0.
@@ -19,6 +20,7 @@ export async function loadDashboard(sb) {
     ordersTotal: 0, ordersOpen: 0, ordersDelivered: 0, ordersRevenue: 0,
     invoicesTotal: 0, invoicesUnpaid: 0, invoicedTotal: 0, collectedTotal: 0, outstandingTotal: 0, overdueTotal: 0,
     purchasesTotal: 0, purchasesOpen: 0, purchasesValue: 0, stockUnits: 0, stockValue: 0, stockSku: 0, stockBelow: 0, projectsTotal: 0, projectsActive: 0,
+    shipToPrepare: 0, shipInProgress: 0, shipShipped: 0, shipDelivered: 0,
   };
   try {
     const [customers, companies, activities, products, quotes, orders, invoices, purchases] = await Promise.all([
@@ -61,6 +63,13 @@ export async function loadDashboard(sb) {
     out.purchasesValue = purchases.filter((p) => p.status !== 'CANCELLED').reduce((s, p) => s + Number(p.total || 0), 0);
     try { const inv = await loadInventory(sb, {}); out.stockUnits = inv.totalUnits; out.stockValue = inv.totalValue; out.stockSku = inv.skuInStock; out.stockBelow = inv.belowCount; }
     catch (_) { /* magazzino non disponibile */ }
+    try {
+      const shipments = await listShipments(sb, { limit: 500 });
+      out.shipToPrepare = shipments.filter((s) => s.status === 'PREPARING').length;
+      out.shipInProgress = shipments.filter((s) => ['PICKED', 'PACKED'].includes(s.status)).length;
+      out.shipShipped = shipments.filter((s) => s.status === 'SHIPPED').length;
+      out.shipDelivered = shipments.filter((s) => s.status === 'DELIVERED').length;
+    } catch (_) { /* logistica non disponibile */ }
     out.b2b = customers.filter((c) => c.type === 'B2B').length;
     out.b2c = customers.filter((c) => c.type !== 'B2B').length;
     out.totalValue = customers.reduce((s, c) => s + Number(c.value_cached || 0), 0);

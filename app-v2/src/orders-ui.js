@@ -4,6 +4,7 @@
 import * as ORD from './orders.js';
 import * as CRM from './crm.js';
 import { convertOrderToInvoice } from './invoices.js';
+import { createShipmentFromOrder } from './logistics.js';
 import { roleForTenant } from './context.js';
 
 const esc = (s) => String(s == null ? '' : s).replace(/[&<>"']/g, (c) => (
@@ -46,6 +47,7 @@ export function renderOrderDetail(bundle, role) {
     <div class="v2-detail-head"><button class="v2-btn v2-ghost" data-back>← Lista</button>
       <div style="display:flex;gap:8px;flex-wrap:wrap">
         ${w && o.status !== 'CANCELLED' ? `<button class="v2-btn" data-invoice="${esc(o.id)}">🧮 Converti in fattura</button>` : ''}
+        ${w && o.status !== 'CANCELLED' ? `<button class="v2-btn" data-shipment="${esc(o.id)}">🚚 Crea spedizione</button>` : ''}
         ${d ? `<button class="v2-btn v2-danger" data-del="${esc(o.id)}">Archivia</button>` : ''}
       </div></div>
     <h2>${esc(o.number || 'Ordine')} <span class="v2-chip">${esc(SL[o.status] || o.status)}</span></h2>
@@ -117,6 +119,11 @@ export function mount(container, { sb, ctx }) {
       const iv = pane.querySelector('[data-invoice]'); if (iv) iv.addEventListener('click', async () => {
         if (!window.confirm('Creare una fattura da questo ordine?')) return;
         try { const inv = await convertOrderToInvoice(sb, (ctx || {}).activeTenant || null, id); toast(root, 'Fattura creata: ' + (inv.number || '')); location.hash = '#/invoices'; }
+        catch (e) { alert(ORD.friendlyError(e)); }
+      });
+      const sp = pane.querySelector('[data-shipment]'); if (sp) sp.addEventListener('click', async () => {
+        if (!window.confirm('Creare una spedizione da questo ordine?')) return;
+        try { const sh = await createShipmentFromOrder(sb, (ctx || {}).activeTenant || null, id); toast(root, 'Spedizione creata: ' + (sh.number || '')); location.hash = '#/logistics'; }
         catch (e) { alert(ORD.friendlyError(e)); }
       });
     } catch (e) { pane.innerHTML = errorBox(ORD.friendlyError(e)); }

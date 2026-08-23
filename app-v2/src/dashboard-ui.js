@@ -44,6 +44,10 @@ export function renderDashboard(d) {
       <div class="v2-kpi"><div class="v2-kpi-l">Sotto scorta</div><div class="v2-kpi-v">${d.stockBelow || 0}</div></div>
       <div class="v2-kpi"><div class="v2-kpi-l">Commesse</div><div class="v2-kpi-v">${d.projectsTotal || 0}</div></div>
       <div class="v2-kpi"><div class="v2-kpi-l">Commesse attive</div><div class="v2-kpi-v">${d.projectsActive || 0}</div></div>
+      <div class="v2-kpi"><div class="v2-kpi-l">Da preparare</div><div class="v2-kpi-v">${d.shipToPrepare || 0}</div></div>
+      <div class="v2-kpi"><div class="v2-kpi-l">Spedizioni in corso</div><div class="v2-kpi-v">${d.shipInProgress || 0}</div></div>
+      <div class="v2-kpi"><div class="v2-kpi-l">Spedite</div><div class="v2-kpi-v">${d.shipShipped || 0}</div></div>
+      <div class="v2-kpi"><div class="v2-kpi-l">Consegnate</div><div class="v2-kpi-v">${d.shipDelivered || 0}</div></div>
     </div>
     <div class="v2-cols" style="margin-top:14px">
       <div class="v2-card"><h3>Ultimi clienti</h3><ul class="v2-list">${recent}</ul></div>
