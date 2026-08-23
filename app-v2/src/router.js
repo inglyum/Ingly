@@ -17,6 +17,7 @@ import { mount as mountReports } from './reports-ui.js';
 import { mount as mountIntel } from './intelligence-ui.js';
 import { mount as mountProduction } from './production-ui.js';
 import { mount as mountLogistics } from './logistics-ui.js';
+import { mount as mountSearch } from './search-ui.js';
 
 export function currentRoute() {
   const h = (typeof location !== 'undefined' && location.hash || '').replace(/^#\/?/, '');
@@ -46,6 +47,7 @@ export function mountRouter(root, ctx, sb) {
     if (r === 'intel' && sb) { try { mountIntel(view, { sb }); } catch (_) {} }
     if (r === 'production' && sb) { try { mountProduction(view, { sb, ctx }); } catch (_) {} }
     if (r === 'logistics' && sb) { try { mountLogistics(view, { sb, ctx }); } catch (_) {} }
+    if (r === 'search' && sb) { try { mountSearch(view, { sb }); } catch (_) {} }
     root.querySelectorAll('[data-route]').forEach((b) =>
       b.classList.toggle('active', b.getAttribute('data-route') === r));
     const crumb = root.querySelector('#v2-crumb');

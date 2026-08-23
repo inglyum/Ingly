@@ -4,6 +4,7 @@
 export const GROUP_ORDER = ["Home","AI","Preventivi","Vendite","Finanza","Clienti","Produzione","Magazzino","Analisi","Marketing","Sistema","Strumenti"];
 export const MODULES = [
   {"s":"dashboard","n":"Dashboard ROI","icon":"📊","group":"Home"},
+  {"s":"search","n":"Ricerca Globale","icon":"🔍","group":"Home"},
   {"s":"ai","n":"AI Decisioni","icon":"🤖","group":"AI"},
   {"s":"aicoach","n":"AI Coach","icon":"🧠","group":"AI"},
   {"s":"bizai","n":"Business AI Hub","icon":"🚀","group":"AI"},

@@ -110,12 +110,17 @@ function viewProduction() {
     <div data-production-root><div class="v2-loading">\u23f3 Inizializzazione produzione\u2026</div></div>`;
 }
 
+function viewSearch() {
+  return `${head({ icon: '🔍', n: 'Ricerca Globale' }, 'Cerca in tutti i moduli · clienti · prodotti · documenti · connesso a Supabase')}
+    <div data-search-root><div class="v2-empty">Digita per cercare…</div></div>`;
+}
+
 function viewLogistics() {
   return `${head({ icon: '\u{1F69A}', n: 'Logistica & Spedizioni' }, 'Preparazione · picking · packing · spedizione · consegna · connesso a Supabase')}
     <div data-logistics-root><div class="v2-loading">⏳ Inizializzazione logistica…</div></div>`;
 }
 
-const SPECIAL = { dashboard: viewDashboard, clients: viewClients, catalog: viewCatalog, quotes: viewQuotes, gestione_ordini: viewOrders, invoices: viewInvoices, aging: viewAging, suppliers: viewSuppliers, purchases: viewPurchases, inventory: viewWarehouse, projects: viewProjects, finance: viewFinance, analytics: viewReports, intel: viewIntel, production: viewProduction, logistics: viewLogistics };
+const SPECIAL = { dashboard: viewDashboard, search: viewSearch, clients: viewClients, catalog: viewCatalog, quotes: viewQuotes, gestione_ordini: viewOrders, invoices: viewInvoices, aging: viewAging, suppliers: viewSuppliers, purchases: viewPurchases, inventory: viewWarehouse, projects: viewProjects, finance: viewFinance, analytics: viewReports, intel: viewIntel, production: viewProduction, logistics: viewLogistics };
 
 export function renderView(section, ctx) {
   const fn = SPECIAL[section];
