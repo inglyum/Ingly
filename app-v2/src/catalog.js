@@ -8,7 +8,7 @@ function esc(s) { return String(s == null ? '' : s).replace(/[%,()]/g, ' ').trim
 
 export async function listProducts(sb, opts = {}) {
   let q = sb.from('catalog_product')
-    .select('id,sku,name,category,kind,price,cost,unit,active').is('deleted_at', null);
+    .select('id,sku,name,category,kind,price,cost,unit,active,image_url').is('deleted_at', null);
   if (opts.kind) q = q.eq('kind', opts.kind);
   if (opts.category) q = q.eq('category', opts.category);
   if (opts.search) { const s = esc(opts.search); q = q.or(`name.ilike.%${s}%,sku.ilike.%${s}%`); }
@@ -41,9 +41,19 @@ export async function softDeleteProduct(sb, id) {
 }
 
 export const PRODUCT_KINDS = ['product', 'service'];
-// Margine % dal prezzo/costo (nessun dato finto: 0 se prezzo 0).
-export function margin(p) {
-  const price = Number(p.price || 0); const cost = Number(p.cost || 0);
-  if (price <= 0) return 0;
-  return Math.round(((price - cost) / price) * 100);
+
+// Margine assoluto = prezzo - costo (mai NaN).
+export function marginValue(p) {
+  const price = Number(p.price) || 0; const cost = Number(p.cost) || 0;
+  const m = price - cost;
+  return Number.isFinite(m) ? Math.round(m * 100) / 100 : 0;
 }
+// Margine % = (prezzo-costo)/prezzo*100. Mai NaN/Infinity: 0 se prezzo ≤ 0.
+export function marginPercent(p) {
+  const price = Number(p.price) || 0; const cost = Number(p.cost) || 0;
+  if (!(price > 0)) return 0;
+  const pct = ((price - cost) / price) * 100;
+  return Number.isFinite(pct) ? Math.round(pct) : 0;
+}
+// Compat: margine % (usato altrove).
+export function margin(p) { return marginPercent(p); }

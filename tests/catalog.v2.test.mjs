@@ -1,7 +1,9 @@
 // INGLY OS V2 — test Catalogo prodotti/servizi (data-layer + render), offline.
 import { describe, it, assert, assertEq } from './harness.mjs';
 import * as CAT from '../app-v2/src/catalog.js';
-import { renderProductRows, renderProductDetail, renderProductForm } from '../app-v2/src/catalog-ui.js';
+import { renderProductRows, renderProductDetail, renderProductForm,
+  renderProductGrid, renderProductCard, renderSkeleton, renderEmpty } from '../app-v2/src/catalog-ui.js';
+import * as ST from '../app-v2/src/storage.js';
 
 function makeMock(store) {
   let uid = 500;
@@ -90,5 +92,68 @@ describe('Catalogo render + RBAC (offline)', (s) => {
   it(s, 'renderProductForm: nuovo vs modifica', async () => {
     assert(/Nuovo prodotto/.test(renderProductForm()), 'nuovo');
     assert(/Modifica prodotto/.test(renderProductForm({ id: 'p1', name: 'Targa' })), 'modifica');
+  });
+});
+
+describe('Catalogo PREMIUM — immagini, margini, render', (s) => {
+  it(s, 'marginValue/marginPercent: mai NaN/Infinity', async () => {
+    assertEq(CAT.marginValue({ price: 100, cost: 40 }), 60);
+    assertEq(CAT.marginPercent({ price: 100, cost: 40 }), 60);
+    assertEq(CAT.marginPercent({ price: 0, cost: 10 }), 0);   // no Infinity
+    assertEq(CAT.marginPercent({ price: 'x', cost: 'y' }), 0); // no NaN
+    assertEq(CAT.marginValue({}), 0);
+  });
+  it(s, 'renderProductCard: mostra immagine se image_url, placeholder altrimenti', async () => {
+    const withImg = renderProductCard({ id: 'p1', name: 'Targa', kind: 'product', price: 10, cost: 4, image_url: 'https://x/i.png', active: true });
+    assert(/<img[^>]+src="https:\/\/x\/i\.png"/.test(withImg), 'immagine non renderizzata');
+    assert(/cat-margin/.test(withImg) && /60%/.test(withImg), 'margine card');
+    const noImg = renderProductCard({ id: 'p2', name: 'Zeta', kind: 'service', price: 0, cost: 0, active: false });
+    assert(/cat-img-ph/.test(noImg), 'placeholder mancante');
+    assert(/Archiviato/.test(noImg), 'stato archiviato');
+  });
+  it(s, 'renderProductGrid/renderEmpty/renderSkeleton', async () => {
+    assert(/cat-grid/.test(renderProductGrid([{ id: 'p1', name: 'A', price: 1, cost: 0 }])), 'grid');
+    assert(/Nessun prodotto/.test(renderProductGrid([])), 'empty via grid');
+    assert(/Nessun prodotto/.test(renderEmpty()), 'empty');
+    assert(/cat-skel/.test(renderSkeleton(3)), 'skeleton');
+  });
+  it(s, 'renderProductDetail: immagine grande + KPI margine/IVA', async () => {
+    const p = { id: 'p1', name: 'Targa', kind: 'product', price: 100, cost: 40, vat: 22, image_url: 'https://x/i.png', active: true };
+    const html = renderProductDetail(p, 'OWNER');
+    assert(/cat-img-lg/.test(html) && /https:\/\/x\/i\.png/.test(html), 'immagine grande');
+    assert(/22%/.test(html), 'IVA'); assert(/60%/.test(html), 'margine %');
+  });
+  it(s, 'renderProductForm: dropzone immagine + preview se image_url', async () => {
+    assert(/data-drop/.test(renderProductForm()) && /data-file/.test(renderProductForm()), 'dropzone');
+    assert(/<img[^>]+src="https:\/\/x\/i\.png"/.test(renderProductForm({ id: 'p1', name: 'X', image_url: 'https://x/i.png' })), 'preview immagine');
+  });
+});
+
+describe('Catalogo PREMIUM — validazione immagini (storage.js)', (s) => {
+  const f = (type, size, name) => ({ type, size, name: name || 'foto.PNG' });
+  it(s, 'validateImage: accetta PNG/JPG/WEBP entro 5MB', async () => {
+    assert(ST.validateImage(f('image/png', 1000)).ok, 'png');
+    assert(ST.validateImage(f('image/jpeg', 1000)).ok, 'jpg');
+    assert(ST.validateImage(f('image/webp', 1000)).ok, 'webp');
+  });
+  it(s, 'validateImage: rifiuta tipo non valido e file troppo grande', async () => {
+    assert(!ST.validateImage(f('application/pdf', 1000)).ok, 'pdf accettato');
+    assert(!ST.validateImage(f('image/gif', 1000)).ok, 'gif accettato');
+    assert(!ST.validateImage(f('image/png', 6 * 1024 * 1024)).ok, 'oversize accettato');
+    assert(!ST.validateImage(null).ok, 'null accettato');
+  });
+  it(s, 'sanitizeFilename: sicuro, no path traversal, estensione da MIME', async () => {
+    const n = ST.sanitizeFilename('../../Evil File!.exe', 'image/png');
+    assert(/^[a-z0-9-]+\.png$/.test(n), 'nome non sanificato: ' + n);
+    assert(!n.includes('/') && !n.includes('..'), 'path traversal');
+  });
+  it(s, 'uploadProductImage: senza storage (demo) ritorna local, non finge persistenza', async () => {
+    const sbNoStorage = { from() {} }; // nessuno .storage
+    const res = await ST.uploadProductImage(sbNoStorage, 't1', f('image/png', 500), () => {});
+    assertEq(res.local, true); assert(res.path.startsWith('t1/'), 'path per-tenant');
+  });
+  it(s, 'uploadProductImage: rifiuta file non valido prima di caricare', async () => {
+    let threw = false; try { await ST.uploadProductImage({}, 't1', f('text/plain', 10)); } catch { threw = true; }
+    assert(threw, 'file non valido accettato');
   });
 });
