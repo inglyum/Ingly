@@ -31,5 +31,6 @@ import './settings.test.mjs';
 import './profitfirst.test.mjs';
 import './sdi.test.mjs';
 import './recurring.test.mjs';
+import './timetracker.test.mjs';
 import { run } from './harness.mjs';
 await run();

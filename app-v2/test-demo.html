@@ -159,6 +159,10 @@ function seed(){
       { id:'sm3', tenant_id:'t1', product_id:'p2', type:'IN', quantity:30, location:'MAIN', reference_type:'purchase', created_at:'2026-08-16', deleted_at:null },
     ],
     supplier_payment:[],
+    time_entry:[
+      { id:'te1', tenant_id:'t1', project_id:'prj1', description:'Incisione targhe', entry_date:'2026-08-21', minutes:180, billable:true, hourly_rate:18, deleted_at:null },
+      { id:'te2', tenant_id:'t1', project_id:null, description:'Preventivi e amministrazione', entry_date:'2026-08-22', minutes:90, billable:false, hourly_rate:18, deleted_at:null },
+    ],
     recurring_invoice:[
       { id:'rec1', tenant_id:'t1', customer_id:'c1', customer_name:'Maria Russo', description:'Canone gestione social mensile', amount:150, vat_rate:22, cadence:'monthly', next_run_date:'2026-08-01', active:true, notes:null, deleted_at:null },
     ],

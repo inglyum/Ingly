@@ -22,6 +22,7 @@ import { mount as mountQuoter } from './quoter-ui.js';
 import { mount as mountSettings } from './settings-ui.js';
 import { mount as mountProfitFirst } from './profitfirst-ui.js';
 import { mount as mountRecurring } from './recurring-ui.js';
+import { mount as mountTimeTracker } from './timetracker-ui.js';
 
 export function currentRoute() {
   const h = (typeof location !== 'undefined' && location.hash || '').replace(/^#\/?/, '');
@@ -56,6 +57,7 @@ export function mountRouter(root, ctx, sb) {
     if (r === 'settings' && sb) { try { mountSettings(view, { sb, ctx }); } catch (_) {} }
     if (r === 'cashflow' && sb) { try { mountProfitFirst(view, { sb, ctx }); } catch (_) {} }
     if (r === 'recurring' && sb) { try { mountRecurring(view, { sb, ctx }); } catch (_) {} }
+    if (r === 'timetracker' && sb) { try { mountTimeTracker(view, { sb, ctx }); } catch (_) {} }
     root.querySelectorAll('[data-route]').forEach((b) =>
       b.classList.toggle('active', b.getAttribute('data-route') === r));
     const crumb = root.querySelector('#v2-crumb');

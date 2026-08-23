@@ -110,6 +110,11 @@ function viewProduction() {
     <div data-production-root><div class="v2-loading">\u23f3 Inizializzazione produzione\u2026</div></div>`;
 }
 
+function viewTimeTracker() {
+  return `${head({ icon: '⏱️', n: 'Time Tracker' }, 'Ore di lavoro · fatturabili · per commessa · KPI ore settimana')}
+    <div data-timetracker-root><div class="v2-loading">⏳ Inizializzazione ore…</div></div>`;
+}
+
 function viewRecurring() {
   return `${head({ icon: '\u{1F501}', n: 'Fatture Ricorrenti' }, 'Template periodici · generazione fatture reali · connesso a Supabase')}
     <div data-recurring-root><div class="v2-loading">⏳ Inizializzazione ricorrenti…</div></div>`;
@@ -140,7 +145,7 @@ function viewLogistics() {
     <div data-logistics-root><div class="v2-loading">⏳ Inizializzazione logistica…</div></div>`;
 }
 
-const SPECIAL = { dashboard: viewDashboard, search: viewSearch, quoter: viewQuoter, settings: viewSettings, cashflow: viewCashflow, recurring: viewRecurring, clients: viewClients, catalog: viewCatalog, quotes: viewQuotes, gestione_ordini: viewOrders, invoices: viewInvoices, aging: viewAging, suppliers: viewSuppliers, purchases: viewPurchases, inventory: viewWarehouse, projects: viewProjects, finance: viewFinance, analytics: viewReports, intel: viewIntel, production: viewProduction, logistics: viewLogistics };
+const SPECIAL = { dashboard: viewDashboard, search: viewSearch, quoter: viewQuoter, settings: viewSettings, cashflow: viewCashflow, recurring: viewRecurring, timetracker: viewTimeTracker, clients: viewClients, catalog: viewCatalog, quotes: viewQuotes, gestione_ordini: viewOrders, invoices: viewInvoices, aging: viewAging, suppliers: viewSuppliers, purchases: viewPurchases, inventory: viewWarehouse, projects: viewProjects, finance: viewFinance, analytics: viewReports, intel: viewIntel, production: viewProduction, logistics: viewLogistics };
 
 export function renderView(section, ctx) {
   const fn = SPECIAL[section];

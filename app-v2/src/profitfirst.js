@@ -8,6 +8,7 @@ import { loadFinance, periodRange } from './finance.js';
 import { getSettings } from './settings.js';
 import { listQuotes } from './quotes.js';
 import { listInvoices, balanceDue } from './invoices.js';
+import { listEntries, billableHours } from './timetracker.js';
 export { friendlyError };
 
 const r2 = (n) => Math.round((Number(n) || 0) * 100) / 100;
@@ -44,11 +45,12 @@ export async function loadProfitFirst(sb, opts = {}) {
   const range = periodRange(period);
   const out = { period, range, incassato: 0, buckets: null, kpis: [], settingsUsed: null, error: null };
   try {
-    const [fin, settings, quotes, invoices] = await Promise.all([
+    const [fin, settings, quotes, invoices, timeEntries] = await Promise.all([
       loadFinance(sb, { from: range.from, to: range.to }).catch(() => ({ incassato: 0 })),
       getSettings(sb, opts.tenantId || null).catch(() => ({})),
       listQuotes(sb, { limit: 1000 }).catch(() => []),
       listInvoices(sb, { limit: 1000 }).catch(() => []),
+      listEntries(sb, { limit: 2000 }).catch(() => []),
     ]);
     out.incassato = r2(fin.incassato || 0);
     out.settingsUsed = { cash_tax_pct: settings.cash_tax_pct, cash_reserve_pct: settings.cash_reserve_pct, cash_goals_pct: settings.cash_goals_pct, cash_operational_pct: settings.cash_operational_pct };
@@ -79,7 +81,8 @@ export async function loadProfitFirst(sb, opts = {}) {
     } else {
       push('revenue', 'Ricavi settimana (incassato)', out.incassato, T.revenue, '€', out.incassato >= T.revenue, 'Finanza → incassi della settimana');
       push('conversion', 'Conversione preventivi', conversion == null ? 0 : r2(conversion * 100), r2(T.conversion * 100), '%', conversion != null && conversion >= T.conversion, 'Preventivi → accettati / (accettati+rifiutati)', conversion == null);
-      push('billableHours', 'Ore fatturabili', 0, T.billableHours, 'h', false, 'Richiede il Time Tracker (non ancora presente)', true);
+      const bh = billableHours(timeEntries, range.from, range.to);
+      push('billableHours', 'Ore fatturabili', bh, T.billableHours, 'h', bh >= T.billableHours, 'Time Tracker → ore fatturabili della settimana');
     }
   } catch (e) { out.error = e; }
   return out;

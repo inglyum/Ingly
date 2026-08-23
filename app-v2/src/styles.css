@@ -172,6 +172,13 @@ body{ background:var(--bg); color:var(--tx); font:14px/1.5 system-ui,-apple-syst
 .v2-drawer-msg{ color:var(--red,#dc2626); font-size:13px }
 @media (min-width:620px){ .v2-drawer-body{ grid-template-columns:1fr 1fr } }
 
+/* Time Tracker — form inline */
+.v2-form-inline{ display:flex; flex-wrap:wrap; gap:8px; align-items:center; margin-bottom:14px }
+.v2-form-inline input, .v2-form-inline select{ padding:8px 10px; border:1px solid var(--border,#2a2a2a); border-radius:8px;
+  background:var(--bg-card-2,#1e1e1e); color:var(--txt,#eee); font-family:inherit; font-size:13px }
+.v2-form-inline input:focus-visible, .v2-form-inline select:focus-visible{ outline:2px solid var(--pri); outline-offset:1px }
+.v2-inline-check{ display:flex; align-items:center; gap:6px; font-size:13px; color:var(--txt-dim,#8a8a8a) }
+
 /* SDI — anteprima XML */
 .v2-xml{ background:var(--bg-card-2,#1e1e1e); border:1px solid var(--border,#2a2a2a); border-radius:8px;
   padding:10px; font-size:11px; line-height:1.4; max-height:320px; overflow:auto; white-space:pre-wrap; word-break:break-word }

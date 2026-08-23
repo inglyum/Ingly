@@ -75,7 +75,8 @@ describe('Profit-First — loadProfitFirst', (s) => {
     const d = await PF.loadProfitFirst(makeMock(seed()), { period: 'week', tenantId: 't1' });
     assert(d.kpis.find((k) => k.key === 'revenue'), 'ricavi settimana');
     const bh = d.kpis.find((k) => k.key === 'billableHours');
-    assert(bh && bh.na && /Time Tracker/.test(bh.source), 'ore N/D con fonte onesta');
+    assert(bh && !bh.na && /Time Tracker/.test(bh.source), 'ore fatturabili dal Time Tracker');
+    assertEq(bh.actual, 0); // nessuna registrazione nel seed
   });
   it(s, 'conversione N/D se nessun preventivo chiuso', async () => {
     const st = seed(); st.sales_quote = [];
