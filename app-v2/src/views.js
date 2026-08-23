@@ -85,7 +85,12 @@ function viewWarehouse() {
     <div data-warehouse-root><div class="v2-loading">\u23f3 Inizializzazione magazzino\u2026</div></div>`;
 }
 
-const SPECIAL = { dashboard: viewDashboard, clients: viewClients, catalog: viewCatalog, quotes: viewQuotes, gestione_ordini: viewOrders, invoices: viewInvoices, aging: viewAging, suppliers: viewSuppliers, purchases: viewPurchases, inventory: viewWarehouse };
+function viewProjects() {
+  return `${head({ icon: '\u{1F4C1}', n: 'Commesse' }, 'Progetti \u00b7 task \u00b7 ricavi/costi/margine \u00b7 connesso a Supabase')}
+    <div data-projects-root><div class="v2-loading">\u23f3 Inizializzazione commesse\u2026</div></div>`;
+}
+
+const SPECIAL = { dashboard: viewDashboard, clients: viewClients, catalog: viewCatalog, quotes: viewQuotes, gestione_ordini: viewOrders, invoices: viewInvoices, aging: viewAging, suppliers: viewSuppliers, purchases: viewPurchases, inventory: viewWarehouse, projects: viewProjects };
 
 export function renderView(section, ctx) {
   const fn = SPECIAL[section];

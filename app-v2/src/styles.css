@@ -218,3 +218,7 @@ body{ background:var(--bg); color:var(--tx); font:14px/1.5 system-ui,-apple-syst
   .cat-form-grid{ grid-template-columns:1fr } .cat-detail-body{ grid-template-columns:1fr }
   .cat-img-lg{ max-width:100% } .fld-row{ grid-template-columns:1fr }
 }
+
+/* Commesse — barra avanzamento */
+.prj-bar{ height:8px; background:var(--card2); border-radius:99px; overflow:hidden; margin:6px 0 12px }
+.prj-bar-fill{ height:100%; background:linear-gradient(90deg,var(--pri),var(--pri2)); border-radius:99px; transition:width .3s }

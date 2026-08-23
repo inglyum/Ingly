@@ -42,6 +42,8 @@ export function renderDashboard(d) {
       <div class="v2-kpi"><div class="v2-kpi-l">Stock (unità)</div><div class="v2-kpi-v">${d.stockUnits || 0}</div></div>
       <div class="v2-kpi"><div class="v2-kpi-l">Valore magazzino</div><div class="v2-kpi-v">${eur(d.stockValue || 0)}</div></div>
       <div class="v2-kpi"><div class="v2-kpi-l">Sotto scorta</div><div class="v2-kpi-v">${d.stockBelow || 0}</div></div>
+      <div class="v2-kpi"><div class="v2-kpi-l">Commesse</div><div class="v2-kpi-v">${d.projectsTotal || 0}</div></div>
+      <div class="v2-kpi"><div class="v2-kpi-l">Commesse attive</div><div class="v2-kpi-v">${d.projectsActive || 0}</div></div>
     </div>
     <div class="v2-cols" style="margin-top:14px">
       <div class="v2-card"><h3>Ultimi clienti</h3><ul class="v2-list">${recent}</ul></div>

@@ -7,6 +7,7 @@ import { listOrders } from './orders.js';
 import { listInvoices, balanceDue } from './invoices.js';
 import { listPurchases } from './purchases.js';
 import { loadInventory } from './warehouse.js';
+import { listProjects } from './projects.js';
 
 // Aggrega i KPI CRM+catalogo+preventivi. Ritorna sempre una struttura completa
 // (0 se vuoto), mai eccezioni verso l'alto: errori → metriche a 0.
@@ -17,7 +18,7 @@ export async function loadDashboard(sb) {
     quotesTotal: 0, quotesDraft: 0, quotesSent: 0, quotesAccepted: 0, quotesAcceptedValue: 0,
     ordersTotal: 0, ordersOpen: 0, ordersDelivered: 0, ordersRevenue: 0,
     invoicesTotal: 0, invoicesUnpaid: 0, invoicedTotal: 0, collectedTotal: 0, outstandingTotal: 0, overdueTotal: 0,
-    purchasesTotal: 0, purchasesOpen: 0, purchasesValue: 0, stockUnits: 0, stockValue: 0, stockSku: 0, stockBelow: 0,
+    purchasesTotal: 0, purchasesOpen: 0, purchasesValue: 0, stockUnits: 0, stockValue: 0, stockSku: 0, stockBelow: 0, projectsTotal: 0, projectsActive: 0,
   };
   try {
     const [customers, companies, activities, products, quotes, orders, invoices, purchases] = await Promise.all([
@@ -30,6 +31,8 @@ export async function loadDashboard(sb) {
       listInvoices(sb, { limit: 500 }).catch(() => []),
       listPurchases(sb, { limit: 500 }).catch(() => []),
     ]);
+    const projects = await listProjects(sb, { limit: 500 }).catch(() => []);
+    out.projectsTotal = projects.length; out.projectsActive = projects.filter((p) => p.status === 'ACTIVE').length;
     out.customers = customers.length;
     out.companies = companies.length;
     out.activities = activities.length;
