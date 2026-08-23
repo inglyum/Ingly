@@ -5,6 +5,7 @@ import { listProducts } from './catalog.js';
 import { listQuotes } from './quotes.js';
 import { listOrders } from './orders.js';
 import { listInvoices, balanceDue } from './invoices.js';
+import { listPurchases } from './purchases.js';
 
 // Aggrega i KPI CRM+catalogo+preventivi. Ritorna sempre una struttura completa
 // (0 se vuoto), mai eccezioni verso l'alto: errori → metriche a 0.
@@ -15,9 +16,10 @@ export async function loadDashboard(sb) {
     quotesTotal: 0, quotesDraft: 0, quotesSent: 0, quotesAccepted: 0, quotesAcceptedValue: 0,
     ordersTotal: 0, ordersOpen: 0, ordersDelivered: 0, ordersRevenue: 0,
     invoicesTotal: 0, invoicesUnpaid: 0, invoicedTotal: 0, collectedTotal: 0, outstandingTotal: 0, overdueTotal: 0,
+    purchasesTotal: 0, purchasesOpen: 0, purchasesValue: 0,
   };
   try {
-    const [customers, companies, activities, products, quotes, orders, invoices] = await Promise.all([
+    const [customers, companies, activities, products, quotes, orders, invoices, purchases] = await Promise.all([
       CRM.listCustomers(sb, { limit: 500 }),
       CRM.listCompanies(sb, { limit: 500 }),
       CRM.listActivities(sb, { limit: 20 }),
@@ -25,6 +27,7 @@ export async function loadDashboard(sb) {
       listQuotes(sb, { limit: 500 }).catch(() => []),
       listOrders(sb, { limit: 500 }).catch(() => []),
       listInvoices(sb, { limit: 500 }).catch(() => []),
+      listPurchases(sb, { limit: 500 }).catch(() => []),
     ]);
     out.customers = customers.length;
     out.companies = companies.length;
@@ -49,6 +52,9 @@ export async function loadDashboard(sb) {
     const today = new Date().toISOString().slice(0, 10);
     out.overdueTotal = activeInv.filter((i) => i.status !== 'PAID' && i.due_date && i.due_date < today)
       .reduce((s, i) => s + Math.max(0, balanceDue(i)), 0);
+    out.purchasesTotal = purchases.length;
+    out.purchasesOpen = purchases.filter((p) => ['ORDERED', 'PARTIALLY_RECEIVED'].includes(p.status)).length;
+    out.purchasesValue = purchases.filter((p) => p.status !== 'CANCELLED').reduce((s, p) => s + Number(p.total || 0), 0);
     out.b2b = customers.filter((c) => c.type === 'B2B').length;
     out.b2c = customers.filter((c) => c.type !== 'B2B').length;
     out.totalValue = customers.reduce((s, c) => s + Number(c.value_cached || 0), 0);

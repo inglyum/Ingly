@@ -47,6 +47,7 @@ export const MODULES = [
   {"s":"components","n":"Componenti & Accessori","icon":"⚙️","group":"Magazzino"},
   {"s":"inventory","n":"Inventario","icon":"📋","group":"Magazzino"},
   {"s":"suppliers","n":"Fornitori","icon":"🚚","group":"Magazzino"},
+  {"s":"purchases","n":"Acquisti","icon":"🛒","group":"Magazzino"},
   {"s":"barcode","n":"Barcode Scanner","icon":"📊","group":"Magazzino"},
   {"s":"finance","n":"Finance Pro","icon":"📊","group":"Finanza"},
   {"s":"cashflow","n":"Cashflow","icon":"💧","group":"Finanza"},

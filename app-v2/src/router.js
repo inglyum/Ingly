@@ -9,6 +9,7 @@ import { mount as mountOrders } from './orders-ui.js';
 import { mount as mountInvoices } from './invoices-ui.js';
 import { mount as mountAging } from './aging-ui.js';
 import { mount as mountSuppliers } from './suppliers-ui.js';
+import { mount as mountPurchases } from './purchases-ui.js';
 
 export function currentRoute() {
   const h = (typeof location !== 'undefined' && location.hash || '').replace(/^#\/?/, '');
@@ -30,6 +31,7 @@ export function mountRouter(root, ctx, sb) {
     if (r === 'invoices' && sb) { try { mountInvoices(view, { sb, ctx }); } catch (_) {} }
     if (r === 'aging' && sb) { try { mountAging(view, { sb }); } catch (_) {} }
     if (r === 'suppliers' && sb) { try { mountSuppliers(view, { sb, ctx }); } catch (_) {} }
+    if (r === 'purchases' && sb) { try { mountPurchases(view, { sb, ctx }); } catch (_) {} }
     root.querySelectorAll('[data-route]').forEach((b) =>
       b.classList.toggle('active', b.getAttribute('data-route') === r));
     const crumb = root.querySelector('#v2-crumb');

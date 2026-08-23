@@ -28,7 +28,7 @@ import { mountRouter } from './src/router.js';
 function makeMock(store){
   let uid = 2000; const now = () => new Date().toISOString(); const r2=n=>Math.round((Number(n)||0)*100)/100;
   const counters = {}; for(const c of (store.sales_quote_counter||[])) counters['sales_quote'+c.tenant_id]=(c.next_val||1)-1;
-  const HDR={ sales_quote_line:['sales_quote','quote_id'], sales_order_line:['sales_order','order_id'], sales_invoice_line:['sales_invoice','invoice_id'] };
+  const HDR={ sales_quote_line:['sales_quote','quote_id'], sales_order_line:['sales_order','order_id'], sales_invoice_line:['sales_invoice','invoice_id'], purchase_order_line:['purchase_order','purchase_order_id'] };
   function recalc(lt, hdr, fk, id){ const ls=(store[lt]||[]).filter(l=>l[fk]===id); const h=(store[hdr]||[]).find(x=>x.id===id); if(!h)return;
     h.subtotal=r2(ls.reduce((s,l)=>s+l.quantity*l.unit_price,0)); h.discount=r2(ls.reduce((s,l)=>s+(l.discount||0),0));
     h.tax=r2(ls.reduce((s,l)=>s+(l.tax||0),0)); h.total=r2(ls.reduce((s,l)=>s+l.line_total,0)); }
@@ -42,6 +42,7 @@ function makeMock(store){
       counters[key]=(counters[key]||0)+1; row.year=y; row.number='FATT-'+y+'-'+String(counters[key]).padStart(6,'0');
       row.status=row.status||'DRAFT'; row.subtotal=row.discount=row.tax=row.total=0; row.paid_total=row.paid_total||0;
       row.issue_date=row.issue_date||now().slice(0,10); if(!row.due_date){ const d=new Date(); d.setDate(d.getDate()+30); row.due_date=d.toISOString().slice(0,10); } }
+    if(table==='purchase_order'){ const key='PO'+row.tenant_id; counters[key]=(counters[key]||0)+1; row.number='ACQ-'+String(counters[key]).padStart(6,'0'); row.status=row.status||'DRAFT'; row.subtotal=row.discount=row.tax=row.total=0; row.order_date=row.order_date||now().slice(0,10); }
     if(table.endsWith('_line')){ row.line_total=r2(row.quantity*row.unit_price-(row.discount||0)+(row.tax||0)); }
   }
   function applyPayments(invId){ const inv=(store.sales_invoice||[]).find(i=>i.id===invId); if(!inv)return;
@@ -136,6 +137,12 @@ function seed(){
       { id:'inv1', tenant_id:'t1', number:'FATT-2026-000001', customer_id:'c1', customer_name:'Maria Russo', order_id:null, year:2026, status:'ISSUED', issue_date:'2026-08-05', due_date:'2026-09-04', subtotal:100, discount:0, tax:22, total:122, paid_total:0, deleted_at:null },
     ],
     sales_payment:[],
+    purchase_order:[
+      { id:'po1', tenant_id:'t1', number:'ACQ-000001', supplier_id:'sup1', supplier_name:'Legnami Belice Srl', status:'ORDERED', order_date:'2026-08-14', expected_date:'2026-08-28', subtotal:250, discount:0, tax:0, total:250, deleted_at:null },
+    ],
+    purchase_order_line:[
+      { id:'pol1', tenant_id:'t1', purchase_order_id:'po1', product_id:null, description:'Tavole MDF 3mm', quantity:50, unit_price:5, discount:0, tax:0, line_total:250, sort_order:0 },
+    ],
     supplier:[
       { id:'sup1', tenant_id:'t1', name:'Legnami Belice Srl', vat:'IT01112223330', email:'ordini@legnamibelice.it', phone:'0918000', active:true, deleted_at:null },
       { id:'sup2', tenant_id:'t1', name:'Plexi Sud', vat:'IT04445556660', email:'info@plexisud.it', phone:'0957000', active:true, deleted_at:null },

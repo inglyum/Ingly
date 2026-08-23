@@ -75,7 +75,12 @@ function viewSuppliers() {
     <div data-suppliers-root><div class="v2-loading">\u23f3 Inizializzazione fornitori\u2026</div></div>`;
 }
 
-const SPECIAL = { dashboard: viewDashboard, clients: viewClients, catalog: viewCatalog, quotes: viewQuotes, gestione_ordini: viewOrders, invoices: viewInvoices, aging: viewAging, suppliers: viewSuppliers };
+function viewPurchases() {
+  return `${head({ icon: '\u{1F6D2}', n: 'Acquisti' }, 'Ordini di acquisto \u00b7 fornitori \u00b7 ricezione prevista \u00b7 connesso a Supabase')}
+    <div data-purchases-root><div class="v2-loading">\u23f3 Inizializzazione acquisti\u2026</div></div>`;
+}
+
+const SPECIAL = { dashboard: viewDashboard, clients: viewClients, catalog: viewCatalog, quotes: viewQuotes, gestione_ordini: viewOrders, invoices: viewInvoices, aging: viewAging, suppliers: viewSuppliers, purchases: viewPurchases };
 
 export function renderView(section, ctx) {
   const fn = SPECIAL[section];
