@@ -81,6 +81,33 @@ describe('Magazzino data-layer (offline)', (s) => {
     const inv = await WH.loadInventory(sb, {});
     assertEq(inv.totalUnits, 0);
   });
+  it(s, 'disponibile = giacenza - impegnato; in arrivo dagli acquisti aperti', async () => {
+    const st = store(); const sb = makeMock(st);
+    st.sales_order = [{ id: 'so1', tenant_id: 't1', status: 'CONFIRMED', deleted_at: null }];
+    st.sales_order_line = [{ order_id: 'so1', product_id: 'p1', quantity: 4 }];
+    st.purchase_order = [{ id: 'po1', tenant_id: 't1', status: 'ORDERED', deleted_at: null }];
+    st.purchase_order_line = [{ purchase_order_id: 'po1', product_id: 'p1', quantity: 20 }];
+    await WH.createMovement(sb, 't1', { product_id: 'p1', type: 'IN', quantity: 10 });
+    const inv = await WH.loadInventory(sb, {});
+    const p1 = inv.rows.find((r) => r.id === 'p1');
+    assertEq(p1.qty, 10); assertEq(p1.committed, 4); assertEq(p1.incoming, 20); assertEq(p1.available, 6);
+  });
+  it(s, 'sotto scorta + quantità da riordinare', async () => {
+    const st = store(); const sb = makeMock(st);
+    st.catalog_product[0].reorder_point = 20; st.catalog_product[0].reorder_qty = 0; // Targa
+    await WH.createMovement(sb, 't1', { product_id: 'p1', type: 'IN', quantity: 5 }); // disp 5 < 20
+    const inv = await WH.loadInventory(sb, {});
+    const p1 = inv.rows.find((r) => r.id === 'p1');
+    assert(p1.below, 'non marcato sotto scorta'); assertEq(p1.toReorder, 15); // 20-5
+    assertEq(inv.belowCount, 1);
+    const only = await WH.loadInventory(sb, { onlyBelow: true });
+    assertEq(only.rows.length, 1);
+  });
+  it(s, 'reorderQtyFor: usa reorder_qty se impostata, altrimenti gap alla soglia', async () => {
+    assertEq(WH.reorderQtyFor({ reorder_qty: 50, reorder_point: 20, available: 5 }), 50);
+    assertEq(WH.reorderQtyFor({ reorder_qty: 0, reorder_point: 20, min_stock: 10, available: 8 }), 12);
+    assertEq(WH.reorderQtyFor({ reorder_qty: 0, reorder_point: 5, available: 10 }), 0);
+  });
 });
 
 describe('Magazzino render (offline)', (s) => {

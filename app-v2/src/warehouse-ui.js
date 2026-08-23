@@ -2,6 +2,7 @@
 // (ledger). Nuovo movimento (carico/scarico/rettifica/trasferimento) da catalogo.
 import * as WH from './warehouse.js';
 import * as CAT from './catalog.js';
+import * as PUR from './purchases.js';
 import { roleForTenant } from './context.js';
 
 const esc = (s) => String(s == null ? '' : s).replace(/[&<>"']/g, (c) => (
@@ -10,10 +11,24 @@ const eur = (n) => '€' + (Number(n || 0)).toLocaleString('it-IT', { minimumFra
 const day = (s) => esc((s || '').slice(0, 10));
 
 export function renderInventoryRows(rows) {
-  if (!rows || !rows.length) return `<tr><td colspan="5"><div class="v2-empty">Nessuna giacenza. Registra un carico per iniziare.</div></td></tr>`;
-  return rows.map((r) => `<tr class="v2-row${r.qty < 0 ? ' v2-row-warn' : ''}">
+  if (!rows || !rows.length) return `<tr><td colspan="8"><div class="v2-empty">Nessuna giacenza. Registra un carico per iniziare.</div></td></tr>`;
+  return rows.map((r) => `<tr class="v2-row${r.qty < 0 || r.below ? ' v2-row-warn' : ''}">
+    <td>${esc(r.name)}${r.below ? ' <span class="v2-chip" style="background:rgba(220,38,38,.16);color:#f87171">sotto scorta</span>' : ''}</td>
+    <td>${esc(r.sku || '—')}</td>
+    <td class="v2-num">${r.qty}</td><td class="v2-num">${r.committed || 0}</td>
+    <td class="v2-num">${r.incoming || 0}</td><td class="v2-num"><b>${r.available != null ? r.available : r.qty}</b></td>
+    <td class="v2-num">${r.min_stock || 0}/${r.reorder_point || 0}</td>
+    <td class="v2-num">${eur(r.value)}</td></tr>`).join('');
+}
+
+export function renderReorderRows(rows, w) {
+  const crit = (rows || []).filter((r) => r.below);
+  if (!crit.length) return `<tr><td colspan="6"><div class="v2-empty">Nessun articolo sotto scorta. Tutto ok ✅</div></td></tr>`;
+  return crit.map((r) => `<tr class="v2-row v2-row-warn" data-reorder-row="${esc(r.id)}">
     <td>${esc(r.name)}</td><td>${esc(r.sku || '—')}</td>
-    <td class="v2-num">${r.qty}</td><td class="v2-num">${eur(r.cost)}</td><td class="v2-num">${eur(r.value)}</td></tr>`).join('');
+    <td class="v2-num">${r.available}</td><td class="v2-num">${Math.max(r.reorder_point || 0, r.min_stock || 0)}</td>
+    <td class="v2-num"><b>${r.toReorder}</b></td>
+    <td>${w ? `<button class="v2-btn v2-sm" data-reorder="${esc(r.id)}" data-qty="${r.toReorder}" data-name="${esc(r.name)}">🛒 Riordina</button>` : '—'}</td></tr>`).join('');
 }
 
 export function renderMovementRows(list, productName) {
@@ -58,6 +73,7 @@ export function mount(container, { sb, ctx }) {
   root.innerHTML = `
     <div class="v2-tabs" data-wh-tabs>
       <button class="v2-tab active" data-wh-tab="stock">📊 Giacenze</button>
+      <button class="v2-tab" data-wh-tab="reorder">⚠️ Sotto scorta</button>
       <button class="v2-tab" data-wh-tab="moves">🔄 Movimenti</button>
     </div>
     <div data-wh-pane>${loading('Inizializzazione…')}</div>`;
@@ -65,7 +81,8 @@ export function mount(container, { sb, ctx }) {
   let productMap = {};
   root.querySelectorAll('[data-wh-tab]').forEach((b) => b.addEventListener('click', () => {
     root.querySelectorAll('[data-wh-tab]').forEach((x) => x.classList.toggle('active', x === b));
-    b.getAttribute('data-wh-tab') === 'stock' ? stock() : moves();
+    const t = b.getAttribute('data-wh-tab');
+    if (t === 'stock') stock(); else if (t === 'reorder') reorder(); else moves();
   }));
 
   async function stock() {
@@ -77,13 +94,14 @@ export function mount(container, { sb, ctx }) {
           <div class="v2-kpi"><div class="v2-kpi-l">SKU a stock</div><div class="v2-kpi-v">${inv.skuInStock}</div></div>
           <div class="v2-kpi"><div class="v2-kpi-l">Unità totali</div><div class="v2-kpi-v">${inv.totalUnits}</div></div>
           <div class="v2-kpi"><div class="v2-kpi-l">Valore magazzino</div><div class="v2-kpi-v">${eur(inv.totalValue)}</div></div>
+          <div class="v2-kpi"><div class="v2-kpi-l">Sotto scorta</div><div class="v2-kpi-v">${inv.belowCount}</div></div>
         </div>
         <div class="v2-toolbar" style="margin-top:12px">
           <input class="v2-search" data-q placeholder="🔍 Cerca prodotto/SKU…">
           ${w ? '<button class="v2-btn" data-new-mov>+ Movimento</button>' : ''}
         </div>
         <div class="v2-table-wrap"><table class="v2-table"><thead><tr>
-          <th>Prodotto</th><th>SKU</th><th>Giacenza</th><th>Costo</th><th>Valore</th></tr></thead>
+          <th>Prodotto</th><th>SKU</th><th>Giacenza</th><th>Impegnato</th><th>In arrivo</th><th>Disponibile</th><th>Min/Riord.</th><th>Valore</th></tr></thead>
           <tbody>${renderInventoryRows(inv.rows)}</tbody></table></div>`;
       const q = pane.querySelector('[data-q]');
       if (q) q.addEventListener('input', async () => {
@@ -91,6 +109,32 @@ export function mount(container, { sb, ctx }) {
         pane.querySelector('tbody').innerHTML = renderInventoryRows(filtered.rows);
       });
       const nm = pane.querySelector('[data-new-mov]'); if (nm) nm.addEventListener('click', () => movementForm(stock));
+    } catch (e) { pane.innerHTML = errorBox(WH.friendlyError(e)); }
+  }
+
+  async function reorder() {
+    pane.innerHTML = loading('Analizzo le scorte…');
+    try {
+      const inv = await WH.loadInventory(sb, {});
+      pane.innerHTML = `
+        <div class="v2-grid">
+          <div class="v2-kpi"><div class="v2-kpi-l">Prodotti critici</div><div class="v2-kpi-v">${inv.belowCount}</div></div>
+          <div class="v2-kpi"><div class="v2-kpi-l">Valore magazzino</div><div class="v2-kpi-v">${eur(inv.totalValue)}</div></div>
+        </div>
+        <p class="v2-muted" style="margin:8px 0">Articoli con disponibile sotto la soglia (punto di riordino / scorta minima). "Riordina" crea una bozza di ordine di acquisto.</p>
+        <div class="v2-table-wrap"><table class="v2-table"><thead><tr>
+          <th>Prodotto</th><th>SKU</th><th>Disponibile</th><th>Soglia</th><th>Da riordinare</th><th></th></tr></thead>
+          <tbody>${renderReorderRows(inv.rows, w)}</tbody></table></div>`;
+      pane.querySelectorAll('[data-reorder]').forEach((b) => b.addEventListener('click', async () => {
+        const pid = b.getAttribute('data-reorder'); const qty = Number(b.getAttribute('data-qty')) || 0; const name = b.getAttribute('data-name');
+        if (qty <= 0) return;
+        try {
+          const po = await PUR.createPurchase(sb, tenantId, { notes: 'Riordino automatico da scorte minime' });
+          await PUR.addLine(sb, tenantId, po.id, { product_id: pid, description: name, quantity: qty, unit_price: 0 });
+          toast(root, `Bozza acquisto ${po.number || ''} creata (${qty} ${name})`);
+          location.hash = '#/purchases';
+        } catch (e) { toast(root, WH.friendlyError(e)); }
+      }));
     } catch (e) { pane.innerHTML = errorBox(WH.friendlyError(e)); }
   }
 

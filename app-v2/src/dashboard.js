@@ -17,7 +17,7 @@ export async function loadDashboard(sb) {
     quotesTotal: 0, quotesDraft: 0, quotesSent: 0, quotesAccepted: 0, quotesAcceptedValue: 0,
     ordersTotal: 0, ordersOpen: 0, ordersDelivered: 0, ordersRevenue: 0,
     invoicesTotal: 0, invoicesUnpaid: 0, invoicedTotal: 0, collectedTotal: 0, outstandingTotal: 0, overdueTotal: 0,
-    purchasesTotal: 0, purchasesOpen: 0, purchasesValue: 0, stockUnits: 0, stockValue: 0, stockSku: 0,
+    purchasesTotal: 0, purchasesOpen: 0, purchasesValue: 0, stockUnits: 0, stockValue: 0, stockSku: 0, stockBelow: 0,
   };
   try {
     const [customers, companies, activities, products, quotes, orders, invoices, purchases] = await Promise.all([
@@ -56,7 +56,7 @@ export async function loadDashboard(sb) {
     out.purchasesTotal = purchases.length;
     out.purchasesOpen = purchases.filter((p) => ['ORDERED', 'PARTIALLY_RECEIVED'].includes(p.status)).length;
     out.purchasesValue = purchases.filter((p) => p.status !== 'CANCELLED').reduce((s, p) => s + Number(p.total || 0), 0);
-    try { const inv = await loadInventory(sb, {}); out.stockUnits = inv.totalUnits; out.stockValue = inv.totalValue; out.stockSku = inv.skuInStock; }
+    try { const inv = await loadInventory(sb, {}); out.stockUnits = inv.totalUnits; out.stockValue = inv.totalValue; out.stockSku = inv.skuInStock; out.stockBelow = inv.belowCount; }
     catch (_) { /* magazzino non disponibile */ }
     out.b2b = customers.filter((c) => c.type === 'B2B').length;
     out.b2c = customers.filter((c) => c.type !== 'B2B').length;

@@ -8,7 +8,7 @@ function esc(s) { return String(s == null ? '' : s).replace(/[%,()]/g, ' ').trim
 
 export async function listProducts(sb, opts = {}) {
   let q = sb.from('catalog_product')
-    .select('id,sku,name,category,kind,price,cost,unit,active,image_url').is('deleted_at', null);
+    .select('id,sku,name,category,kind,price,cost,unit,active,image_url,min_stock,reorder_point,reorder_qty').is('deleted_at', null);
   if (opts.kind) q = q.eq('kind', opts.kind);
   if (opts.category) q = q.eq('category', opts.category);
   if (opts.search) { const s = esc(opts.search); q = q.or(`name.ilike.%${s}%,sku.ilike.%${s}%`); }

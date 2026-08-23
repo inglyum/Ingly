@@ -128,6 +128,11 @@ export function renderProductForm(p) {
           <label class="fld">IVA %<input name="vat" type="number" step="0.01" min="0" value="${esc(p.vat != null ? p.vat : '')}"></label>
         </div>
         <div class="cat-margin-preview" data-margin-preview></div>
+        <div class="fld-row">
+          <label class="fld">Scorta minima<input name="min_stock" type="number" step="0.01" min="0" value="${esc(p.min_stock != null ? p.min_stock : '')}"></label>
+          <label class="fld">Punto riordino<input name="reorder_point" type="number" step="0.01" min="0" value="${esc(p.reorder_point != null ? p.reorder_point : '')}"></label>
+          <label class="fld">Qtà riordino<input name="reorder_qty" type="number" step="0.01" min="0" value="${esc(p.reorder_qty != null ? p.reorder_qty : '')}"></label>
+        </div>
         <label class="fld">Tag (virgola)<input name="tags" value="${esc((p.tags || []).join(', '))}"></label>
         <label class="fld">Descrizione<textarea name="description">${esc(p.description || p.notes || '')}</textarea></label>
         <label class="chk"><input type="checkbox" name="active" ${p.active === false ? '' : 'checked'}> Attivo</label>
@@ -323,6 +328,9 @@ export function mount(container, { sb, ctx }) {
           active: raw.active === 'on',
           tags: (raw.tags || '').split(',').map((t) => t.trim()).filter(Boolean),
           description: raw.description || null, image_url,
+          min_stock: raw.min_stock === '' ? 0 : Number(raw.min_stock),
+          reorder_point: raw.reorder_point === '' ? 0 : Number(raw.reorder_point),
+          reorder_qty: raw.reorder_qty === '' ? 0 : Number(raw.reorder_qty),
         };
         if (p && p.id) { await CAT.updateProduct(sb, p.id, data); toast(root, 'Prodotto aggiornato', 'ok'); detail(p.id); }
         else { const out = await CAT.createProduct(sb, tenantId, data); toast(root, 'Prodotto creato', 'ok'); detail(out.id); }

@@ -57,24 +57,81 @@ export function stockLevels(movements) {
   return lv;
 }
 
-// Riepilogo giacenze arricchito con dati prodotto + valore (giacenza*costo).
+const r2 = (n) => Math.round((Number(n) || 0) * 100) / 100;
+
+// Stock IMPEGNATO (committed): quantità sulle righe degli ordini di vendita
+// aperti (non consegnati/annullati). Derivato, nessuna tabella nuova.
+export async function committedByProduct(sb) {
+  const map = {};
+  try {
+    const { data: orders } = await sb.from('sales_order').select('id,status').is('deleted_at', null);
+    const open = (orders || []).filter((o) => !['DELIVERED', 'CANCELLED'].includes(o.status));
+    if (!open.length) return map;
+    const ids = new Set(open.map((o) => o.id));
+    const { data: lines } = await sb.from('sales_order_line').select('order_id,product_id,quantity');
+    for (const l of lines || []) if (l.product_id && ids.has(l.order_id)) map[l.product_id] = (map[l.product_id] || 0) + Number(l.quantity || 0);
+  } catch (_) { /* ordini non disponibili */ }
+  return map;
+}
+
+// Stock IN ARRIVO (incoming): quantità sulle righe degli ordini di acquisto
+// aperti (ordinati/parziali, non ricevuti/annullati). Derivato.
+export async function incomingByProduct(sb) {
+  const map = {};
+  try {
+    const { data: pos } = await sb.from('purchase_order').select('id,status').is('deleted_at', null);
+    const open = (pos || []).filter((o) => ['ORDERED', 'PARTIALLY_RECEIVED'].includes(o.status));
+    if (!open.length) return map;
+    const ids = new Set(open.map((o) => o.id));
+    const { data: lines } = await sb.from('purchase_order_line').select('purchase_order_id,product_id,quantity');
+    for (const l of lines || []) if (l.product_id && ids.has(l.purchase_order_id)) map[l.product_id] = (map[l.product_id] || 0) + Number(l.quantity || 0);
+  } catch (_) { /* acquisti non disponibili */ }
+  return map;
+}
+
+// Quantità consigliata da riordinare per un articolo sotto soglia.
+export function reorderQtyFor(row) {
+  if (Number(row.reorder_qty) > 0) return r2(row.reorder_qty);
+  const target = Math.max(Number(row.reorder_point) || 0, Number(row.min_stock) || 0);
+  const gap = target - (Number(row.available) || 0);
+  return gap > 0 ? r2(gap) : 0;
+}
+export function isBelowMin(row) {
+  const threshold = Math.max(Number(row.reorder_point) || 0, Number(row.min_stock) || 0);
+  return threshold > 0 && (Number(row.available) || 0) < threshold;
+}
+
+// Riepilogo giacenze arricchito: on-hand (ledger), impegnato, in arrivo,
+// disponibile, soglie, valore (giacenza*costo). onlyBelow filtra i critici.
 export async function loadInventory(sb, opts = {}) {
-  const [movements, products] = await Promise.all([
+  const [movements, products, committed, incoming] = await Promise.all([
     listMovements(sb, { limit: 2000 }),
     listProducts(sb, { limit: 1000 }),
+    committedByProduct(sb),
+    incomingByProduct(sb),
   ]);
   const lv = stockLevels(movements);
   const byId = Object.fromEntries(products.map((p) => [p.id, p]));
   let rows = products.map((p) => {
     const qty = lv[p.id] || 0;
-    return { id: p.id, name: p.name, sku: p.sku, cost: Number(p.cost) || 0, qty, value: Math.round(qty * (Number(p.cost) || 0) * 100) / 100 };
+    const comm = committed[p.id] || 0; const inc = incoming[p.id] || 0;
+    const available = r2(qty - comm);
+    const row = {
+      id: p.id, name: p.name, sku: p.sku, cost: Number(p.cost) || 0,
+      qty, committed: r2(comm), incoming: r2(inc), available,
+      min_stock: Number(p.min_stock) || 0, reorder_point: Number(p.reorder_point) || 0, reorder_qty: Number(p.reorder_qty) || 0,
+      value: r2(qty * (Number(p.cost) || 0)),
+    };
+    row.below = isBelowMin(row); row.toReorder = row.below ? reorderQtyFor(row) : 0;
+    return row;
   });
-  // includi eventuali movimenti su prodotti non più in lista (edge)
-  for (const pid of Object.keys(lv)) if (!byId[pid]) rows.push({ id: pid, name: '(prodotto rimosso)', sku: '—', cost: 0, qty: lv[pid], value: 0 });
+  for (const pid of Object.keys(lv)) if (!byId[pid]) rows.push({ id: pid, name: '(prodotto rimosso)', sku: '—', cost: 0, qty: lv[pid], committed: 0, incoming: 0, available: lv[pid], min_stock: 0, reorder_point: 0, reorder_qty: 0, value: 0, below: false, toReorder: 0 });
   if (opts.onlyStock) rows = rows.filter((r) => r.qty !== 0);
+  if (opts.onlyBelow) rows = rows.filter((r) => r.below);
   if (opts.search) { const s = String(opts.search).toLowerCase(); rows = rows.filter((r) => (r.name || '').toLowerCase().includes(s) || (r.sku || '').toLowerCase().includes(s)); }
   rows.sort((a, b) => b.qty - a.qty);
-  const totalValue = Math.round(rows.reduce((s, r) => s + r.value, 0) * 100) / 100;
-  const totalUnits = Math.round(rows.reduce((s, r) => s + r.qty, 0) * 100) / 100;
-  return { rows, totalValue, totalUnits, skuInStock: rows.filter((r) => r.qty > 0).length };
+  const totalValue = r2(rows.reduce((s, r) => s + r.value, 0));
+  const totalUnits = r2(rows.reduce((s, r) => s + r.qty, 0));
+  const belowCount = rows.filter((r) => r.below).length;
+  return { rows, totalValue, totalUnits, skuInStock: rows.filter((r) => r.qty > 0).length, belowCount };
 }
