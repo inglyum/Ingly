@@ -13,6 +13,14 @@ const r2 = (n) => Math.round((Number(n) || 0) * 100) / 100;
 export function lineDbPayload(l, tenantId, quoteId, sortOrder, opts = {}) {
   const c = computeLine(l, opts);
   const discountAbs = r2(Math.max(0, c.unitPrice * c.qty - c.imponibile));
+  const hasWorkings = Array.isArray(l.workings) && l.workings.length;
+  // Con le lavorazioni i bucket di costo sono quelli calcolati (sfrido incluso);
+  // senza, si conservano i valori flat grezzi (retro-compatibilità).
+  const material = hasWorkings ? c.material : r2(Number(l.cost_material) || 0);
+  const machine = hasWorkings ? c.machine : r2(Number(l.cost_machine) || 0);
+  const labor = hasWorkings ? c.labor : r2(Number(l.cost_labor) || 0);
+  const design = hasWorkings ? c.design : r2(Number(l.cost_design) || 0);
+  const extra = hasWorkings ? c.extra : r2(Number(l.cost_extra) || 0);
   return {
     tenant_id: tenantId, quote_id: quoteId,
     product_id: l.product_id || null,
@@ -20,11 +28,10 @@ export function lineDbPayload(l, tenantId, quoteId, sortOrder, opts = {}) {
     description: l.description || (l.kind === 'extra' ? 'Extra' : 'Riga'),
     quantity: c.qty, unit_price: c.unitPrice,
     discount: discountAbs, tax: c.iva,
-    cost_material: r2(Number(l.cost_material) || 0), cost_machine: r2(Number(l.cost_machine) || 0),
-    cost_labor: r2(Number(l.cost_labor) || 0), cost_design: r2(Number(l.cost_design) || 0),
-    cost_extra: r2(Number(l.cost_extra) || 0),
+    cost_material: material, cost_machine: machine, cost_labor: labor, cost_design: design, cost_extra: extra,
     markup_pct: c.markupPct, discount_pct: c.discountPct, vat_rate: c.vatRate,
     image_url: l.image_url || null, spec: l.spec || null,
+    workings: hasWorkings ? (c.workings || l.workings) : null, // snapshot storico congelato
     sort_order: Number(sortOrder) || 0,
   };
 }

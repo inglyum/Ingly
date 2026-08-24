@@ -123,18 +123,63 @@ export function computeQuote(input = {}) {
 // ==========================================================================
 const max0 = (n) => Math.max(0, Number(n) || 0);
 
-// Calcolo completo di una riga a partire dal breakdown costi. Ritorna costi,
-// prezzo, sconto, IVA, imponibile, totale, margine e margine%. Il materiale
-// riceve lo sfrido (default KB 15%) salvo sfridoPct esplicito.
+// ── CONFIGURA LAVORAZIONE — categorie e calcolo per lavorazione (cost component)
+// Ogni lavorazione ha una categoria con parametri dinamici; costo deterministico.
+export const WORKING_CATEGORIES = [
+  { k: 'material', label: 'Materiale', icon: '🧱' },
+  { k: 'machine', label: 'Laser / Macchina', icon: '🔦' },
+  { k: 'labor', label: 'Manodopera / Assemblaggio', icon: '🔧' },
+  { k: 'painting', label: 'Verniciatura', icon: '🎨' },
+  { k: 'gadget', label: 'Gadget / LED / Minuteria', icon: '💡' },
+  { k: 'catalog', label: 'Prodotto da Catalogo', icon: '📦' },
+];
+// Mappa categoria → bucket costo (per colonne flat/BI).
+const CAT_BUCKET = { material: 'material', painting: 'material', machine: 'machine', labor: 'labor', gadget: 'extra', catalog: 'extra', design: 'design', extra: 'extra' };
+
+// Costo di UNA lavorazione secondo la categoria (deterministico, spiegabile).
+export function computeWorking(w = {}) {
+  const n = (x) => Math.max(0, Number(x) || 0);
+  let cost = 0;
+  switch (w.category) {
+    case 'material': cost = n(w.mq) * (1 + n(w.sfrido_pct) / 100) * n(w.cost_per_mq); break;
+    case 'machine': cost = n(w.minutes) * n(w.cost_per_min); break;
+    case 'labor': cost = (n(w.minutes) / 60 + n(w.hours)) * n(w.rate_per_hour); break;
+    case 'painting': cost = n(w.surface_mq) * n(w.cost_per_mq) * Math.max(1, n(w.coats) || 1); break;
+    case 'gadget': case 'catalog': cost = n(w.quantity) * n(w.unit_cost); break;
+    default: cost = n(w.cost);
+  }
+  return { ...w, cost: r2(cost) };
+}
+
+// Somma le lavorazioni in bucket di costo (già finali: lo sfrido è dentro la
+// lavorazione 'material', quindi NON va riapplicato).
+export function bucketsFromWorkings(workings) {
+  const computed = (workings || []).map(computeWorking);
+  const b = { material: 0, machine: 0, labor: 0, design: 0, extra: 0 };
+  for (const w of computed) { const k = CAT_BUCKET[w.category] || 'extra'; b[k] = r2(b[k] + w.cost); }
+  return { buckets: b, computed, unitCost: r2(b.material + b.machine + b.labor + b.design + b.extra) };
+}
+
+// Calcolo completo di una riga. Se la riga ha `workings` (Configura Lavorazione)
+// il costo unitario è la somma delle lavorazioni (sfrido già incluso); altrimenti
+// usa il breakdown flat (materiale riceve lo sfrido KB). Ritorna costi, prezzo,
+// sconto, IVA, imponibile, totale, margine, margine%.
 export function computeLine(l = {}, opts = {}) {
   const qty = Math.max(1, Math.floor(Number(l.quantity) || 1));
-  const sfrido = opts.sfridoPct != null ? Number(opts.sfridoPct) / 100 : SFRIDO;
-  const material = r2(max0(l.cost_material) * (1 + sfrido));
-  const machine = r2(max0(l.cost_machine));
-  const labor = r2(max0(l.cost_labor));
-  const design = r2(max0(l.cost_design));
-  const extra = r2(max0(l.cost_extra));
-  const unitCost = r2(material + machine + labor + design + extra);
+  let material, machine, labor, design, extra, unitCost, workings = null;
+  if (Array.isArray(l.workings) && l.workings.length) {
+    const bw = bucketsFromWorkings(l.workings);
+    material = bw.buckets.material; machine = bw.buckets.machine; labor = bw.buckets.labor;
+    design = bw.buckets.design; extra = bw.buckets.extra; unitCost = bw.unitCost; workings = bw.computed;
+  } else {
+    const sfrido = opts.sfridoPct != null ? Number(opts.sfridoPct) / 100 : SFRIDO;
+    material = r2(max0(l.cost_material) * (1 + sfrido));
+    machine = r2(max0(l.cost_machine));
+    labor = r2(max0(l.cost_labor));
+    design = r2(max0(l.cost_design));
+    extra = r2(max0(l.cost_extra));
+    unitCost = r2(material + machine + labor + design + extra);
+  }
   const markupPct = Number(l.markup_pct != null ? l.markup_pct : (opts.defaultMarkupPct != null ? opts.defaultMarkupPct : 200));
   // prezzo unitario: esplicito (unit_price) se fornito e useStoredPrice, altrimenti da markup
   const priceFromMarkup = roundTo90(unitCost * (1 + markupPct / 100));
@@ -149,7 +194,7 @@ export function computeLine(l = {}, opts = {}) {
   const margin = r2(imponibile - cost);
   const marginPct = imponibile > 0 ? r2((margin / imponibile) * 100) : 0;
   return {
-    qty, material, machine, labor, design, extra, unitCost, markupPct, unitPrice,
+    qty, material, machine, labor, design, extra, unitCost, markupPct, unitPrice, workings,
     discountPct, netUnit, vatRate, imponibile, iva, total, cost, margin, marginPct,
     minPrice: unitCost, // prezzo minimo vitale = break-even unitario
   };
