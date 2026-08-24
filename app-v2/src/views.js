@@ -146,8 +146,8 @@ function viewSettings() {
 }
 
 function viewQuoter() {
-  return `${head({ icon: '📄', n: 'Smart Quoter' }, 'Preventivazione parametrica · formula KB · Materiale+Macchina+Lavoro+Design × Markup')}
-    <div data-quoter-root><div class="v2-loading">⏳ Inizializzazione preventivatore…</div></div>`;
+  return `${head({ icon: '📄', n: 'Smart Quoter' }, 'Preventivazione premium · breakdown costi · markup · margine · anchoring · PDF · workflow ERP')}
+    <div data-quoterstudio-root><div class="v2-loading">⏳ Inizializzazione Smart Quoter…</div></div>`;
 }
 
 function viewSearch() {

@@ -117,6 +117,82 @@ export function computeQuote(input = {}) {
   };
 }
 
+// ==========================================================================
+// MOTORE PREMIUM — breakdown per riga, anchoring, margine, prezzo minimo.
+// Deterministico e spiegabile. markup/discount/IVA espressi in PERCENTUALE.
+// ==========================================================================
+const max0 = (n) => Math.max(0, Number(n) || 0);
+
+// Calcolo completo di una riga a partire dal breakdown costi. Ritorna costi,
+// prezzo, sconto, IVA, imponibile, totale, margine e margine%. Il materiale
+// riceve lo sfrido (default KB 15%) salvo sfridoPct esplicito.
+export function computeLine(l = {}, opts = {}) {
+  const qty = Math.max(1, Math.floor(Number(l.quantity) || 1));
+  const sfrido = opts.sfridoPct != null ? Number(opts.sfridoPct) / 100 : SFRIDO;
+  const material = r2(max0(l.cost_material) * (1 + sfrido));
+  const machine = r2(max0(l.cost_machine));
+  const labor = r2(max0(l.cost_labor));
+  const design = r2(max0(l.cost_design));
+  const extra = r2(max0(l.cost_extra));
+  const unitCost = r2(material + machine + labor + design + extra);
+  const markupPct = Number(l.markup_pct != null ? l.markup_pct : (opts.defaultMarkupPct != null ? opts.defaultMarkupPct : 200));
+  // prezzo unitario: esplicito (unit_price) se fornito e useStoredPrice, altrimenti da markup
+  const priceFromMarkup = roundTo90(unitCost * (1 + markupPct / 100));
+  const unitPrice = (opts.useStoredPrice && l.unit_price != null) ? r2(l.unit_price) : priceFromMarkup;
+  const discountPct = Math.min(100, Math.max(0, Number(l.discount_pct) || 0));
+  const netUnit = r2(unitPrice * (1 - discountPct / 100));
+  const vatRate = Number(l.vat_rate != null ? l.vat_rate : (opts.defaultVat != null ? opts.defaultVat : 22));
+  const imponibile = r2(netUnit * qty);
+  const iva = r2(imponibile * vatRate / 100);
+  const total = r2(imponibile + iva);
+  const cost = r2(unitCost * qty);
+  const margin = r2(imponibile - cost);
+  const marginPct = imponibile > 0 ? r2((margin / imponibile) * 100) : 0;
+  return {
+    qty, material, machine, labor, design, extra, unitCost, markupPct, unitPrice,
+    discountPct, netUnit, vatRate, imponibile, iva, total, cost, margin, marginPct,
+    minPrice: unitCost, // prezzo minimo vitale = break-even unitario
+  };
+}
+
+// Prezzo unitario (,90) per ottenere un margine target sul prezzo.
+export function priceForMargin(unitCost, targetMarginPct) {
+  const m = Number(targetMarginPct) / 100;
+  if (!(m < 1)) return null;
+  return roundTo90(max0(unitCost) / (1 - m));
+}
+
+// Anchoring a 3 livelli attorno al markup base: economy / consigliato / premium.
+export function anchoringTiers(unitCost, baseMarkupPct) {
+  const c = max0(unitCost); const mk = Number(baseMarkupPct) || 0;
+  return {
+    economy: roundTo90(c * (1 + (mk * 0.8) / 100)),
+    consigliato: roundTo90(c * (1 + mk / 100)),
+    premium: roundTo90(c * (1 + (mk * 1.3) / 100)),
+  };
+}
+
+// Indicatore di rischio margine rispetto a una soglia minima (default 55%).
+export function marginRisk(marginPct, minMarginPct = 55) {
+  const m = Number(marginPct) || 0;
+  if (m < minMarginPct) return 'high';
+  if (m < minMarginPct + 10) return 'medium';
+  return 'low';
+}
+
+// Aggregazione documento: somma righe (product+extra), sconto/IVA/margine e
+// acconto. lines = array di righe grezze (col breakdown); opts.depositPct.
+export function computeDocument(lines = [], opts = {}) {
+  const rows = (lines || []).map((l) => ({ ...computeLine(l, opts), kind: l.kind || 'product', description: l.description }));
+  const sum = (f) => r2(rows.reduce((s, r) => s + r[f], 0));
+  const imponibile = sum('imponibile'); const iva = sum('iva'); const total = sum('total');
+  const cost = sum('cost'); const margin = r2(imponibile - cost);
+  const marginPct = imponibile > 0 ? r2((margin / imponibile) * 100) : 0;
+  const depositPct = opts.depositPct != null ? Number(opts.depositPct) : 0;
+  const deposit = depositPct > 0 ? r2(total * depositPct / 100) : 0;
+  return { rows, imponibile, iva, total, cost, margin, marginPct, deposit, depositPct, risk: marginRisk(marginPct, opts.minMarginPct) };
+}
+
 // Descrizione-SNAPSHOT: congela nel testo della riga il dettaglio del calcolo,
 // così il documento resta spiegabile e NON dipende dai valori futuri del
 // catalogo (nessun ricalcolo retroattivo). Solo il prezzo unitario fa fede.

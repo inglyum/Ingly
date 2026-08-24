@@ -18,7 +18,7 @@ import { mount as mountIntel } from './intelligence-ui.js';
 import { mount as mountProduction } from './production-ui.js';
 import { mount as mountLogistics } from './logistics-ui.js';
 import { mount as mountSearch } from './search-ui.js';
-import { mount as mountQuoter } from './quoter-ui.js';
+import { mount as mountQuoter } from './quoterstudio-ui.js';
 import { mount as mountSettings } from './settings-ui.js';
 import { mount as mountProfitFirst } from './profitfirst-ui.js';
 import { mount as mountRecurring } from './recurring-ui.js';
