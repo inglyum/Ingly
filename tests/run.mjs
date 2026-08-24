@@ -38,5 +38,6 @@ import './fixedcosts.test.mjs';
 import './audit.test.mjs';
 import './exporter.test.mjs';
 import './equipment.test.mjs';
+import './materials.test.mjs';
 import { run } from './harness.mjs';
 await run();

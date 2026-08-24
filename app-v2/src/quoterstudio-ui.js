@@ -209,7 +209,7 @@ export function mount(container, { sb, ctx }) {
     root.querySelectorAll('[data-w]').forEach((el) => el.addEventListener(el.tagName === 'SELECT' ? 'change' : 'input', () => {
       const wk = working(); if (!wk) return; const k = el.getAttribute('data-w'); wk[k] = el.value;
       if (k === 'category') { Object.assign(wk, newWorking(el.value), { description: wk.description, resource_id: null }); draw(); return; }
-      updateWorkLabel(); refreshTotals();
+      updateWorkLabel(); updateWorkCost(); refreshTotals();
     }));
     const wres = root.querySelector('[data-wres]'); if (wres) wres.addEventListener('change', () => applyResource(wres.value));
     // selezioni & liste
@@ -265,6 +265,7 @@ export function mount(container, { sb, ctx }) {
     const rk = root.querySelector('[data-r="risk"]'); if (rk) { rk.textContent = RISK_LABEL[Q.marginRisk(cl.marginPct, 55)]; rk.className = 'v2-note ' + riskCls; }
   }
   function updateProdLabel() { const el = root.querySelector(`.v2-studio-line[data-prod="${S.sel}"] .v2-sl-main b`); if (el) el.textContent = line().description || 'Prodotto ' + (S.sel + 1); }
+  function updateWorkCost() { const wk = working(); const el = root.querySelector('.v2-work-cost b'); if (el && wk) el.textContent = eur(Q.computeWorking(wk).cost); }
   function updateWorkLabel() { const wk = working(); const el = root.querySelector(`.v2-work-row[data-work="${S.selW}"]`); if (!el || !wk) return; const cw = Q.computeWorking(wk); el.querySelector('.v2-wr-main b').textContent = `${CAT_ICON[wk.category] || '•'} ${wk.description || CAT_LABEL[wk.category] || 'Lavorazione'}`; el.querySelector('.v2-wr-main span').textContent = `${CAT_LABEL[wk.category] || wk.category} · ${eur(cw.cost)}`; }
 
   async function onSave() {

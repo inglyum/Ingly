@@ -112,7 +112,7 @@ describe('V2 Routing / rendering moduli (offline)', (s) => {
     assert(/non ancora connesso a V2/i.test(html), 'manca badge non-connesso');
   });
   it(s, 'i moduli non ancora connessi mostrano il badge (nessun controllo finto)', async () => {
-    const html = renderView('materials', ctx); // modulo backend non ancora implementato
+    const html = renderView('paints', ctx); // modulo backend non ancora implementato
     assert(/non ancora connesso/i.test(html), 'modulo non marcato');
   });
 });
