@@ -37,5 +37,6 @@ import './timetracker.test.mjs';
 import './fixedcosts.test.mjs';
 import './audit.test.mjs';
 import './exporter.test.mjs';
+import './equipment.test.mjs';
 import { run } from './harness.mjs';
 await run();

@@ -26,6 +26,7 @@ import { mount as mountTimeTracker } from './timetracker-ui.js';
 import { mount as mountFixedCosts } from './fixedcosts-ui.js';
 import { mount as mountAudit } from './audit-ui.js';
 import { mount as mountBackup } from './exporter-ui.js';
+import { mount as mountEquipment } from './equipment-ui.js';
 
 export function currentRoute() {
   const h = (typeof location !== 'undefined' && location.hash || '').replace(/^#\/?/, '');
@@ -64,6 +65,7 @@ export function mountRouter(root, ctx, sb) {
     if (r === 'fixed_costs' && sb) { try { mountFixedCosts(view, { sb, ctx }); } catch (_) {} }
     if (r === 'history' && sb) { try { mountAudit(view, { sb, ctx }); } catch (_) {} }
     if (r === 'backup' && sb) { try { mountBackup(view, { sb, ctx }); } catch (_) {} }
+    if (r === 'equipment' && sb) { try { mountEquipment(view, { sb, ctx }); } catch (_) {} }
     root.querySelectorAll('[data-route]').forEach((b) =>
       b.classList.toggle('active', b.getAttribute('data-route') === r));
     const crumb = root.querySelector('#v2-crumb');

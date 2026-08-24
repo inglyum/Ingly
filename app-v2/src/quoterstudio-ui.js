@@ -9,6 +9,7 @@ import * as Q from './quoter.js';
 import * as DOC from './quoterdoc.js';
 import * as CRM from './crm.js';
 import { listProducts } from './catalog.js';
+import { listEquipment, costPerMin } from './equipment.js';
 import { getSettings } from './settings.js';
 import { changeStatus } from './quotes.js';
 import { convertQuoteToOrder } from './orders.js';
@@ -45,7 +46,7 @@ export function mount(container, { sb, ctx }) {
   root.innerHTML = loading('Inizializzazione Smart Quoter…');
 
   const S = { doc: { title: '', customer_id: '', customer_name: '', priority: 'normal', category: '', notes: '', valid_until: '', deposit_pct: 0, lines: [newLine()] }, sel: 0, selW: 0, id: null };
-  let customers = [], products = [], settings = {}, prodById = {};
+  let customers = [], products = [], equipment = [], settings = {}, prodById = {}, eqById = {};
 
   const line = () => S.doc.lines[S.sel];
   const working = () => { const l = line(); return l && l.workings[S.selW]; };
@@ -54,8 +55,9 @@ export function mount(container, { sb, ctx }) {
   Promise.all([
     CRM.listCustomers(sb, { limit: 500 }).catch(() => []),
     listProducts(sb, { limit: 1000 }).catch(() => []),
+    listEquipment(sb, { activeOnly: true }).catch(() => []),
     getSettings(sb, tenantId).catch(() => ({})),
-  ]).then(([cs, ps, st]) => { customers = cs; products = ps; settings = st || {}; prodById = Object.fromEntries(ps.map((p) => [p.id, p])); draw(); })
+  ]).then(([cs, ps, eq, st]) => { customers = cs; products = ps; equipment = eq; settings = st || {}; prodById = Object.fromEntries(ps.map((p) => [p.id, p])); eqById = Object.fromEntries(eq.map((e) => [e.id, e])); draw(); })
     .catch((e) => { root.innerHTML = errorBox(Q.friendlyError(e)); });
 
   // ---------- RENDER ----------
@@ -101,8 +103,13 @@ export function mount(container, { sb, ctx }) {
     </div>`;
   }
 
-  function resourceOpts(sel) {
-    return '<option value="">— manuale —</option>' + products.map((p) => `<option value="${esc(p.id)}"${sel === p.id ? ' selected' : ''}>${esc(p.name)} · ${eur(p.cost)}${p.unit ? '/' + esc(p.unit) : ''}</option>`).join('');
+  // Sorgente risorse per categoria: Laser/Macchina → Attrezzature (€/min reali);
+  // le altre → Catalogo/Magazzino. Nessuna seconda anagrafica: il Quoter LEGGE.
+  function resourceOpts(cat, sel) {
+    if (cat === 'machine') {
+      return '<option value="">— manuale —</option>' + equipment.map((e) => `<option value="${esc(e.id)}"${sel === e.id ? ' selected' : ''}>${esc(e.name)} · ${eur(costPerMin(e))}/min</option>`).join('');
+    }
+    return '<option value="">— manuale —</option>' + products.map((p) => `<option value="${esc(p.id)}"${sel === p.id ? ' selected' : ''}>${esc(p.name)} · ${eur(p.cost_per_mq != null && (cat === 'material' || cat === 'painting') ? p.cost_per_mq : p.cost)}${p.unit ? '/' + esc(p.unit) : ''}</option>`).join('');
   }
 
   function renderCenter() {
@@ -121,7 +128,7 @@ export function mount(container, { sb, ctx }) {
       else fields = `${f('quantity', 'Quantità', '1')}${f('unit_cost', 'Costo unitario €', '0.01')}`;
       params = `
         <label>Categoria<select data-w="category">${catOpts}</select></label>
-        <label>Risorsa da listino<select data-wres>${resourceOpts(wk.resource_id)}</select></label>
+        <label>Risorsa da listino<select data-wres>${resourceOpts(wk.category, wk.resource_id)}</select></label>
         <label>Descrizione<input data-w="description" value="${esc(wk.description || '')}"></label>
         <div class="v2-breakdown-inputs">${fields}</div>
         <div class="v2-work-cost">Costo lavorazione: <b>${eur(cw.cost)}</b></div>`;
@@ -227,14 +234,18 @@ export function mount(container, { sb, ctx }) {
   }
 
   function applyResource(id) {
-    const wk = working(); const p = prodById[id]; if (!wk) return;
+    const wk = working(); if (!wk) return;
     wk.resource_id = id || null;
-    if (p) {
-      if (!wk.description) wk.description = p.name;
-      const cost = Number(p.cost) || 0;
-      if (wk.category === 'material' || wk.category === 'painting') wk.cost_per_mq = cost;
-      else if (wk.category === 'gadget' || wk.category === 'catalog') wk.unit_cost = cost;
-      // machine/labor: la risorsa fornisce il nome; tariffa/min impostate dall'utente
+    if (wk.category === 'machine') {
+      const e = eqById[id];
+      if (e) { if (!wk.description) wk.description = e.name; wk.cost_per_min = costPerMin(e); } // tariffa reale dall'anagrafica
+    } else {
+      const p = prodById[id];
+      if (p) {
+        if (!wk.description) wk.description = p.name;
+        if (wk.category === 'material' || wk.category === 'painting') wk.cost_per_mq = p.cost_per_mq != null ? Number(p.cost_per_mq) : Number(p.cost) || 0;
+        else if (wk.category === 'gadget' || wk.category === 'catalog') wk.unit_cost = Number(p.cost) || 0;
+      }
     }
     draw();
   }
