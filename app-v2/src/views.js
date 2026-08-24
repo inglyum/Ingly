@@ -110,6 +110,11 @@ function viewProduction() {
     <div data-production-root><div class="v2-loading">\u23f3 Inizializzazione produzione\u2026</div></div>`;
 }
 
+function viewBackup() {
+  return `${head({ icon: '\u{1F4BE}', n: 'Backup & Export' }, 'Backup JSON completo · export CSV per entità · portabilità dati')}
+    <div data-export-root><div class="v2-loading">⏳ Inizializzazione export…</div></div>`;
+}
+
 function viewAudit() {
   return `${head({ icon: '\u{1F4DC}', n: 'Audit Log' }, 'Storico operazioni · tracciamento server-side · riservato OWNER/ADMIN')}
     <div data-audit-root><div class="v2-loading">⏳ Inizializzazione audit…</div></div>`;
@@ -155,7 +160,7 @@ function viewLogistics() {
     <div data-logistics-root><div class="v2-loading">⏳ Inizializzazione logistica…</div></div>`;
 }
 
-const SPECIAL = { dashboard: viewDashboard, search: viewSearch, quoter: viewQuoter, settings: viewSettings, cashflow: viewCashflow, recurring: viewRecurring, timetracker: viewTimeTracker, fixed_costs: viewFixedCosts, history: viewAudit, clients: viewClients, catalog: viewCatalog, quotes: viewQuotes, gestione_ordini: viewOrders, invoices: viewInvoices, aging: viewAging, suppliers: viewSuppliers, purchases: viewPurchases, inventory: viewWarehouse, projects: viewProjects, finance: viewFinance, analytics: viewReports, intel: viewIntel, production: viewProduction, logistics: viewLogistics };
+const SPECIAL = { dashboard: viewDashboard, search: viewSearch, quoter: viewQuoter, settings: viewSettings, cashflow: viewCashflow, recurring: viewRecurring, timetracker: viewTimeTracker, fixed_costs: viewFixedCosts, history: viewAudit, backup: viewBackup, clients: viewClients, catalog: viewCatalog, quotes: viewQuotes, gestione_ordini: viewOrders, invoices: viewInvoices, aging: viewAging, suppliers: viewSuppliers, purchases: viewPurchases, inventory: viewWarehouse, projects: viewProjects, finance: viewFinance, analytics: viewReports, intel: viewIntel, production: viewProduction, logistics: viewLogistics };
 
 export function renderView(section, ctx) {
   const fn = SPECIAL[section];

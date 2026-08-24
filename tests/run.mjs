@@ -34,5 +34,6 @@ import './recurring.test.mjs';
 import './timetracker.test.mjs';
 import './fixedcosts.test.mjs';
 import './audit.test.mjs';
+import './exporter.test.mjs';
 import { run } from './harness.mjs';
 await run();
