@@ -129,12 +129,15 @@ export const WORKING_CATEGORIES = [
   { k: 'material', label: 'Materiale', icon: '🧱' },
   { k: 'machine', label: 'Laser / Macchina', icon: '🔦' },
   { k: 'labor', label: 'Manodopera / Assemblaggio', icon: '🔧' },
+  { k: 'design', label: 'Design', icon: '✏️' },
   { k: 'painting', label: 'Verniciatura', icon: '🎨' },
   { k: 'gadget', label: 'Gadget / LED / Minuteria', icon: '💡' },
   { k: 'catalog', label: 'Prodotto da Catalogo', icon: '📦' },
+  { k: 'extra', label: 'Extra (setup/packaging…)', icon: '➕' },
 ];
-// Mappa categoria → bucket costo (per colonne flat/BI).
-const CAT_BUCKET = { material: 'material', painting: 'material', machine: 'machine', labor: 'labor', gadget: 'extra', catalog: 'extra', design: 'design', extra: 'extra' };
+// Mappa categoria → bucket costo (per colonne flat/BI). La verniciatura confluisce
+// nel bucket 'material' (è materiale di consumo); resta distinta nel breakdown UI.
+const CAT_BUCKET = { material: 'material', painting: 'material', machine: 'machine', labor: 'labor', design: 'design', gadget: 'extra', catalog: 'extra', extra: 'extra' };
 
 // Costo di UNA lavorazione secondo la categoria (deterministico, spiegabile).
 export function computeWorking(w = {}) {
@@ -145,7 +148,8 @@ export function computeWorking(w = {}) {
     case 'machine': cost = n(w.minutes) * n(w.cost_per_min); break;
     case 'labor': cost = (n(w.minutes) / 60 + n(w.hours)) * n(w.rate_per_hour); break;
     case 'painting': cost = n(w.surface_mq) * n(w.cost_per_mq) * Math.max(1, n(w.coats) || 1); break;
-    case 'gadget': case 'catalog': cost = n(w.quantity) * n(w.unit_cost); break;
+    case 'design': cost = n(w.amount); break;
+    case 'gadget': case 'catalog': case 'extra': cost = n(w.quantity) * n(w.unit_cost); break;
     default: cost = n(w.cost);
   }
   return { ...w, cost: r2(cost) };

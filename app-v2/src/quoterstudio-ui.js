@@ -32,7 +32,8 @@ function newWorking(cat) {
   if (cat === 'machine') return { ...b, minutes: 10, cost_per_min: 0 };
   if (cat === 'labor') return { ...b, minutes: 30, hours: 0, rate_per_hour: 18 };
   if (cat === 'painting') return { ...b, surface_mq: 1, cost_per_mq: 0, coats: 1 };
-  if (cat === 'gadget' || cat === 'catalog') return { ...b, quantity: 1, unit_cost: 0 };
+  if (cat === 'design') return { ...b, amount: 0 };
+  if (cat === 'gadget' || cat === 'catalog' || cat === 'extra') return { ...b, quantity: 1, unit_cost: 0 };
   return { ...b, mq: 1, sfrido_pct: 15, cost_per_mq: 0 }; // material
 }
 const newLine = () => ({ description: 'Prodotto', product_id: null, quantity: 1, markup_pct: 200, discount_pct: 0, vat_rate: 22, spec: '', image_url: '', workings: [newWorking('material')] });
@@ -106,10 +107,19 @@ export function mount(container, { sb, ctx }) {
   // Sorgente risorse per categoria: Laser/Macchina → Attrezzature (€/min reali);
   // le altre → Catalogo/Magazzino. Nessuna seconda anagrafica: il Quoter LEGGE.
   function resourceOpts(cat, sel) {
+    if (cat === 'design') return '<option value="">— manuale —</option>';
     if (cat === 'machine') {
       return '<option value="">— manuale —</option>' + equipment.map((e) => `<option value="${esc(e.id)}"${sel === e.id ? ' selected' : ''}>${esc(e.name)} · ${eur(costPerMin(e))}/min</option>`).join('');
     }
-    return '<option value="">— manuale —</option>' + products.map((p) => `<option value="${esc(p.id)}"${sel === p.id ? ' selected' : ''}>${esc(p.name)} · ${eur(p.cost_per_mq != null && (cat === 'material' || cat === 'painting') ? p.cost_per_mq : p.cost)}${p.unit ? '/' + esc(p.unit) : ''}</option>`).join('');
+    // Materiale/Verniciatura → materiali (kind='material') in cima, poi altri prodotti;
+    // Gadget/Catalogo/Extra → catalogo prodotti.
+    const wantMat = (cat === 'material' || cat === 'painting');
+    const list = wantMat ? products.slice().sort((a, b) => (b.kind === 'material' ? 1 : 0) - (a.kind === 'material' ? 1 : 0)) : products;
+    return '<option value="">— manuale —</option>' + list.map((p) => {
+      const cost = wantMat && p.cost_per_mq != null ? p.cost_per_mq : p.cost;
+      const tag = wantMat && p.kind === 'material' ? '🪵 ' : '';
+      return `<option value="${esc(p.id)}"${sel === p.id ? ' selected' : ''}>${tag}${esc(p.name)} · ${eur(cost)}${p.unit ? '/' + esc(p.unit) : ''}</option>`;
+    }).join('');
   }
 
   function renderCenter() {
@@ -125,6 +135,7 @@ export function mount(container, { sb, ctx }) {
       else if (wk.category === 'machine') fields = `${f('minutes', 'Minuti', '1')}${f('cost_per_min', 'Costo / min €', '0.01')}`;
       else if (wk.category === 'labor') fields = `${f('minutes', 'Minuti', '1')}${f('hours', 'Ore', '0.25')}${f('rate_per_hour', 'Tariffa €/h', '0.5')}`;
       else if (wk.category === 'painting') fields = `${f('surface_mq', 'Superficie (mq)', '0.01')}${f('cost_per_mq', 'Costo / mq €', '0.01')}${f('coats', 'Mani', '1')}`;
+      else if (wk.category === 'design') fields = `${f('amount', 'Costo design €', '0.5')}`;
       else fields = `${f('quantity', 'Quantità', '1')}${f('unit_cost', 'Costo unitario €', '0.01')}`;
       params = `
         <label>Categoria<select data-w="category">${catOpts}</select></label>
@@ -144,18 +155,21 @@ export function mount(container, { sb, ctx }) {
     </div>`;
   }
 
+  const BREAK_CATS = ['material', 'machine', 'labor', 'design', 'painting', 'gadget', 'catalog', 'extra'];
+  function breakdownRows(cl) {
+    const catSum = Object.fromEntries(BREAK_CATS.map((k) => [k, 0]));
+    (cl.workings || []).forEach((wk) => { catSum[wk.category] = (catSum[wk.category] || 0) + wk.cost; });
+    return BREAK_CATS.filter((k) => catSum[k] > 0).map((k) => `<div class="v2-sum-line"><span>${CAT_ICON[k]} ${esc(CAT_LABEL[k])}</span><b>${eur(catSum[k])}</b></div>`).join('') || '<div class="v2-muted">Nessuna lavorazione</div>';
+  }
+
   function renderRight() {
     const l = line(); const cl = Q.computeLine(l, {}); const d = computedDoc();
-    const cats = ['material', 'machine', 'labor', 'painting', 'gadget', 'catalog'];
-    const catSum = Object.fromEntries(cats.map((k) => [k, 0]));
-    (cl.workings || []).forEach((wk) => { catSum[wk.category] = (catSum[wk.category] || 0) + wk.cost; });
-    const rows = cats.filter((k) => catSum[k] > 0).map((k) => `<div class="v2-sum-line"><span>${CAT_ICON[k]} ${esc(CAT_LABEL[k])}</span><b>${eur(catSum[k])}</b></div>`).join('') || '<div class="v2-muted">Nessuna lavorazione</div>';
     const tiers = Q.anchoringTiers(cl.unitCost, Number(l.markup_pct) || 0);
     const sugg = Q.priceForMargin(cl.unitCost, 60);
     const riskCls = cl.marginPct < 55 ? 'v2-bad' : cl.marginPct < 65 ? '' : 'v2-ok';
     return `<div class="v2-studio-col v2-studio-right">
       <h3>Cost Breakdown <span class="v2-muted">prodotto</span></h3>
-      ${rows}
+      <div data-r="breakdown">${breakdownRows(cl)}</div>
       <div class="v2-sum-line v2-sum-tot"><span>Costo produzione (unit.)</span><b data-r="unitcost">${eur(cl.unitCost)}</b></div>
       <div class="v2-form-row" style="margin-top:8px">
         <label>Markup %<input data-l="markup_pct" type="number" step="1" value="${esc(l.markup_pct)}"></label>
@@ -263,6 +277,7 @@ export function mount(container, { sb, ctx }) {
     set('doc-imp', eur(d.imponibile)); set('doc-iva', eur(d.iva)); set('doc-total', eur(d.total)); set('doc-dep', eur(d.deposit));
     const mg = root.querySelector('[data-r="margin"]'); if (mg) { mg.textContent = `${eur(cl.margin)} (${cl.marginPct}%)`; mg.className = riskCls; }
     const rk = root.querySelector('[data-r="risk"]'); if (rk) { rk.textContent = RISK_LABEL[Q.marginRisk(cl.marginPct, 55)]; rk.className = 'v2-note ' + riskCls; }
+    const bd = root.querySelector('[data-r="breakdown"]'); if (bd) bd.innerHTML = breakdownRows(cl); // breakdown per categoria LIVE
   }
   function updateProdLabel() { const el = root.querySelector(`.v2-studio-line[data-prod="${S.sel}"] .v2-sl-main b`); if (el) el.textContent = line().description || 'Prodotto ' + (S.sel + 1); }
   function updateWorkCost() { const wk = working(); const el = root.querySelector('.v2-work-cost b'); if (el && wk) el.textContent = eur(Q.computeWorking(wk).cost); }

@@ -62,8 +62,26 @@ describe('Configura Lavorazione — calcolo per categoria', (s) => {
   it(s, 'Prodotto Catalogo: quantità × costo unitario', async () => {
     assertEq(Q.computeWorking({ category: 'catalog', quantity: 10, unit_cost: 0.2 }).cost, 2);
   });
+  it(s, 'Design: costo fisso (amount)', async () => {
+    assertEq(Q.computeWorking({ category: 'design', amount: 25 }).cost, 25);
+  });
+  it(s, 'Extra: quantità × costo unitario', async () => {
+    assertEq(Q.computeWorking({ category: 'extra', quantity: 3, unit_cost: 2 }).cost, 6);
+  });
   it(s, 'valori negativi → 0', async () => {
     assertEq(Q.computeWorking({ category: 'material', mq: -5, cost_per_mq: 10 }).cost, 0);
+  });
+  it(s, 'WORKING_CATEGORIES include tutte le 8 categorie del breakdown', async () => {
+    const keys = Q.WORKING_CATEGORIES.map((c) => c.k);
+    ['material', 'machine', 'labor', 'design', 'painting', 'gadget', 'catalog', 'extra'].forEach((k) => assert(keys.includes(k), 'manca ' + k));
+  });
+  it(s, 'bucket: design→design, extra/gadget/catalog→extra, painting→material', async () => {
+    const b = Q.bucketsFromWorkings([
+      { category: 'design', amount: 10 },
+      { category: 'extra', quantity: 1, unit_cost: 5 },
+      { category: 'painting', surface_mq: 1, cost_per_mq: 4, coats: 1 },
+    ]);
+    assertEq(b.buckets.design, 10); assertEq(b.buckets.extra, 5); assertEq(b.buckets.material, 4);
   });
 });
 
