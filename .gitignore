@@ -3,3 +3,4 @@ node_modules/
 test-results/
 dist/
 *.log
+app-v2/ingly-smart-quoter-demo.html

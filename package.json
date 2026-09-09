@@ -10,7 +10,8 @@
     "check": "npm run verify && npm run test",
     "latest": "node scripts/find-latest.mjs",
     "typecheck": "tsc --noEmit",
-    "build": "vite build"
+    "build": "vite build",
+    "demo:standalone": "node scripts/build-standalone-demo.mjs"
   },
   "devDependencies": {
     "@supabase/supabase-js": "^2.112.3",
