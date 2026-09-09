@@ -82,3 +82,13 @@ l'esito reale.
   CANCELLED (allineati al kanban v96).
 - **Dashboard**: sbloccato il **ricavo reale** (somma ordini non annullati) +
   ordini totali/aperti — ora semanticamente corretto perché esistono gli Ordini.
+
+## Materiali / Vernici / Componenti = master-data unica (no duplicazione)
+- Un materiale, una vernice, un componente sono lo STESSO `catalog_product`
+  con `kind='material'` (migr. 0030) distinti da `material_type`. Le "sotto-
+  anagrafiche" Vernici/Componenti sono VISTE TIPIZZATE (filtro `materialTypeGroup`),
+  NON tabelle separate → una sola source of truth che alimenta Magazzino/Acquisti/
+  Quoter/Produzione. Motivazione: rispetto del principio "non duplicare".
+- Version bump app-v2 → 0.2.0: milestone ERP (Smart Quoter Studio + Configura
+  Lavorazione a parità V96, Attrezzature €/min, Materiali master-data). Schema
+  fino a migr. 0030, suite 422+ verde.

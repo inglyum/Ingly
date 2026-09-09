@@ -61,3 +61,18 @@ export function materialCostPerMq(m) {
   if (Number(m.cost_per_mq) > 0) return r2(m.cost_per_mq);
   return r2(Number(m.cost) || 0);
 }
+
+// Classifica un materiale in una vista tipizzata dal suo material_type/categoria.
+// Vernici e Componenti sono viste sulla stessa master-data (nessuna anagrafica
+// duplicata): non tabelle separate.
+export function materialTypeGroup(m) {
+  const t = String((m && (m.material_type || m.subcategory || m.category)) || '').toLowerCase();
+  if (/vern|paint|bombolet|smalt/.test(t)) return 'paint';
+  if (/compon|minuter|gadget|led|vite|magnet|accessor/.test(t)) return 'component';
+  return 'material';
+}
+
+export const TYPE_GROUPS = [
+  { k: '', label: 'Tutti' }, { k: 'material', label: 'Materiali' },
+  { k: 'paint', label: 'Vernici' }, { k: 'component', label: 'Componenti' },
+];

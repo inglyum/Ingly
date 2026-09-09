@@ -63,18 +63,23 @@ export function mount(container, { sb, ctx }) {
   const pane = root.querySelector('[data-mat-pane]');
   let suppliers = [];
 
+  let typeFilter = '';
   async function list() {
     pane.innerHTML = loading('Carico materiali…');
     try {
-      const rows = await MAT.listMaterials(sb, {});
+      const all = await MAT.listMaterials(sb, {});
+      const rows = typeFilter ? all.filter((m) => MAT.materialTypeGroup(m) === typeFilter) : all;
       const below = rows.filter((m) => m.below).length;
       const totVal = rows.reduce((s, m) => s + m.stockValue, 0);
+      const tabs = MAT.TYPE_GROUPS.map((g) => `<button class="v2-tab${typeFilter === g.k ? ' active' : ''}" data-type="${g.k}">${esc(g.label)} <span class="v2-kcount">${g.k ? all.filter((m) => MAT.materialTypeGroup(m) === g.k).length : all.length}</span></button>`).join('');
       pane.innerHTML = `
+        <div class="v2-tabs" data-type-tabs>${tabs}</div>
         <div class="v2-toolbar">${w ? '<button class="v2-btn" data-new>+ Nuovo materiale</button>' : ''}
-          <span class="v2-muted">${rows.length} materiali · ${below} sotto scorta · valore ${eur(totVal)}</span></div>
+          <span class="v2-muted">${rows.length} voci · ${below} sotto scorta · valore ${eur(totVal)}</span></div>
         <div class="v2-table-wrap"><table class="v2-table"><thead><tr>
           <th>Materiale</th><th>Tipo</th><th>Costo</th><th>Giacenza</th><th>Disp.</th><th>Valore</th><th></th></tr></thead>
           <tbody>${renderRows(rows)}</tbody></table></div>`;
+      pane.querySelectorAll('[data-type]').forEach((b) => b.addEventListener('click', () => { typeFilter = b.getAttribute('data-type'); list(); }));
       const nw = pane.querySelector('[data-new]'); if (nw) nw.addEventListener('click', () => form());
       pane.querySelectorAll('[data-edit]').forEach((b) => b.addEventListener('click', async () => { const m = await MAT.getMaterial(sb, b.getAttribute('data-edit')); form(m); }));
       pane.querySelectorAll('[data-del]').forEach((b) => b.addEventListener('click', async () => { try { await MAT.softDeleteMaterial(sb, b.getAttribute('data-del')); toast(root, 'Archiviato'); list(); } catch (e) { toast(root, MAT.friendlyError(e)); } }));

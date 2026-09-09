@@ -1,6 +1,6 @@
 {
   "name": "ingly-os",
-  "version": "0.1.0",
+  "version": "0.2.0",
   "private": true,
   "description": "INGLY OS — gestionale artigiano laser & personalizzazione (monolite offline-first) + toolchain di qualità",
   "type": "module",

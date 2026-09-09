@@ -68,6 +68,14 @@ describe('Materiali — master-data + stock', (s) => {
     assertEq(MAT.materialCostPerMq({ cost_per_mq: 12, cost: 5 }), 12);
     assertEq(MAT.materialCostPerMq({ cost: 5 }), 5);
   });
+  it(s, 'materialTypeGroup: vernici/componenti = viste tipizzate (no anagrafica separata)', async () => {
+    assertEq(MAT.materialTypeGroup({ material_type: 'vernice' }), 'paint');
+    assertEq(MAT.materialTypeGroup({ material_type: 'bomboletta smalto' }), 'paint');
+    assertEq(MAT.materialTypeGroup({ material_type: 'componente' }), 'component');
+    assertEq(MAT.materialTypeGroup({ category: 'LED e minuteria' }), 'component');
+    assertEq(MAT.materialTypeGroup({ material_type: 'MDF' }), 'material');
+    assertEq(MAT.materialTypeGroup({}), 'material');
+  });
 });
 
 describe('Materiali — integrazione ERP (una source of truth)', (s) => {
